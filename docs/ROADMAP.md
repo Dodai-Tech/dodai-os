@@ -8,10 +8,14 @@ of the design are in [ARCHITECTURE.md](ARCHITECTURE.md). Status: `[x]` done, `[ 
 - [x] `dodai-os-core` (`no_std`): capabilities, touch gestures, `App` contract
 - [x] `dodai-os-hal` (`no_std`): display, touch, backlight, clock, board traits
 - [x] Architecture document, backup of the S3 board's native firmware
+- [x] `dodai-os-kernel` (`no_std`, no `unsafe`): static cooperative scheduler, message queues, capability table with delegation, fuzzed
+- [x] `dodai-os-shell-model` (`no_std`): launcher paging, hit testing, navigation, shared with Dodai DE
+- [x] `dodai-os-host`: device profiles (S3 AMOLED, round watch, P4 7in, headless, desktop), host clock and framebuffer display
 
 ## Phase 1: first device, hosted preview (ESP32-S3 AMOLED 2.06)
-- [ ] `dodai-os-host`: hosted backend (window, mouse as touch, OS clock) for development
-- [ ] `dodai-os-shell` with Slint: home screen, app grid, status bar, navigation, theme from `dodai-core`
+- [ ] `dodai-os-host` window: draw the framebuffer, mouse as touch, `--device` frames (profiles exist)
+- [ ] `dodai-os-shell` with Slint on `dodai-os-shell-model`: home screen, app grid, status bar, theme from `dodai-core`
+- [ ] Run apps as kernel tasks: shell and apps talk to services by message over `dodai-os-kernel`
 - [ ] ESP-IDF backend for the S3 board: SH8601 display, touch, PMU, RTC, IMU (pins from Waveshare's BSP)
 - [ ] Apps: weather (`weathertrack-core`), clock, settings (WiFi, brightness, time, about)
 - [ ] Settings: Bluetooth, OTA updates, sleep and wake, battery
@@ -22,7 +26,9 @@ of the design are in [ARCHITECTURE.md](ARCHITECTURE.md). Status: `[x]` done, `[ 
 - [ ] Board profiles in TOML; the launcher lists only apps a board can run
 
 ## Phase 3: native kernel (standalone), RISC-V ESPs first
-- [ ] `dodai-os-kernel`: static scheduler, IPC, capability table (host-testable)
+- [x] `dodai-os-kernel` stage 1: cooperative scheduler, IPC, capabilities (host-testable)
+- [ ] Kernel stage 2: timers, preemptive threads and per-task stacks behind the `Port` trait
+- [ ] `dodai-os-port-riscv32` (excluded crate, `unsafe` with safety comments): context switch, traps, PMP
 - [ ] QEMU RISC-V port in CI with a hello-world service
 - [ ] `esp-hal` + `esp-wifi` backend on the C6 and P4, replacing ESP-IDF
 - [ ] Xtensa port (S3) and Cortex-M port (RP2350, nRF52, STM32)

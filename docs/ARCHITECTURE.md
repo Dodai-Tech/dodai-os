@@ -26,8 +26,10 @@ hardware only through capabilities the shell grants.
 |---|---|---|
 | `dodai-os-core` | capabilities, touch gestures, the `App` contract | yes |
 | `dodai-os-hal` | `Display`, `Touch`, `Backlight`, `Clock`, `Board` traits | yes |
-| `dodai-os-shell` (planned) | launcher, home screen, navigation | yes + alloc |
-| `dodai-os-kernel` (planned) | scheduler, IPC, capability table | yes |
+| `dodai-os-shell-model` | launcher paging, hit testing, navigation (no UI toolkit) | yes |
+| `dodai-os-shell` (planned) | Slint view on the shell model | yes + alloc |
+| `dodai-os-kernel` | cooperative scheduler, message queues, capability table | yes |
+| `dodai-os-host` | hosted backend: device profiles, host clock and display | no |
 | `dodai-os-port-<arch>` (planned) | architecture-specific code | yes |
 | `dodai-os-<chip>` | firmware (ESP-IDF today), excluded from the workspace | no |
 | `dodai-os-board-<name>` (planned) | one device: pins, drivers, capabilities | yes |

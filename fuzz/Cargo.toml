@@ -10,6 +10,7 @@ cargo-fuzz = true
 [dependencies]
 libfuzzer-sys = "0.4"
 dodai-os-core = { path = "../crates/dodai-os-core" }
+dodai-os-kernel = { path = "../crates/dodai-os-kernel" }
 
 # Not part of the main workspace (needs nightly).
 [workspace]
@@ -17,6 +18,13 @@ dodai-os-core = { path = "../crates/dodai-os-core" }
 [[bin]]
 name = "gestures"
 path = "fuzz_targets/gestures.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "kernel"
+path = "fuzz_targets/kernel.rs"
 test = false
 doc = false
 bench = false

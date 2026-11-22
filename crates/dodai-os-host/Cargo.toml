@@ -1,0 +1,27 @@
+[package]
+name = "dodai-os-host"
+description = "Dodai OS hosted backend: runs on Linux, macOS and Windows with device profiles for development"
+readme = "../../README.md"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+publish = false
+
+[lib]
+name = "dodai_os_host"
+path = "src/lib.rs"
+
+[dependencies]
+dodai-os-core.workspace = true
+dodai-os-hal.workspace = true
+
+[lints]
+workspace = true
+
+[[bin]]
+name = "dodai-os-host"
+path = "src/main.rs"

@@ -35,7 +35,15 @@ name = "dodai-os-core-fuzz"
 version = "0.0.0"
 dependencies = [
  "dodai-os-core",
+ "dodai-os-kernel",
  "libfuzzer-sys",
+]
+
+[[package]]
+name = "dodai-os-kernel"
+version = "0.1.0"
+dependencies = [
+ "dodai-os-core",
 ]
 
 [[package]]

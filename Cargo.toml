@@ -2,7 +2,13 @@
 resolver = "3"
 # Only host-testable code is a workspace member. Firmware crates need the ESP toolchain and
 # their own .cargo/config.toml + rust-toolchain.toml, so they are excluded and build on their own.
-members = ["crates/dodai-os-core", "crates/dodai-os-hal"]
+members = [
+    "crates/dodai-os-core",
+    "crates/dodai-os-hal",
+    "crates/dodai-os-kernel",
+    "crates/dodai-os-shell-model",
+    "crates/dodai-os-host",
+]
 exclude = [
     "crates/dodai-os-esp32s3",
 ]
@@ -21,6 +27,9 @@ homepage = "https://github.com/Dodai-Tech/dodai-os"
 [workspace.dependencies]
 dodai-os-core = { path = "crates/dodai-os-core", version = "0.1.0" }
 dodai-os-hal = { path = "crates/dodai-os-hal", version = "0.1.0" }
+dodai-os-kernel = { path = "crates/dodai-os-kernel", version = "0.1.0" }
+dodai-os-shell-model = { path = "crates/dodai-os-shell-model", version = "0.1.0" }
+dodai-os-host = { path = "crates/dodai-os-host", version = "0.1.0" }
 
 [workspace.lints.rust]
 unsafe_code = "forbid"

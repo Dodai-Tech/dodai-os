@@ -12,3 +12,25 @@ version = "0.1.0"
 dependencies = [
  "dodai-os-core",
 ]
+
+[[package]]
+name = "dodai-os-host"
+version = "0.1.0"
+dependencies = [
+ "dodai-os-core",
+ "dodai-os-hal",
+]
+
+[[package]]
+name = "dodai-os-kernel"
+version = "0.1.0"
+dependencies = [
+ "dodai-os-core",
+]
+
+[[package]]
+name = "dodai-os-shell-model"
+version = "0.1.0"
+dependencies = [
+ "dodai-os-core",
+]

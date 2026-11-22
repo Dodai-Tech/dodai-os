@@ -1,0 +1,22 @@
+[package]
+name = "dodai-os-kernel"
+description = "Dodai OS microkernel: static cooperative scheduler, message queues and capability table (no_std, no allocation)"
+readme = "../../README.md"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+publish = false
+
+[lib]
+name = "dodai_os_kernel"
+path = "src/lib.rs"
+
+[dependencies]
+dodai-os-core.workspace = true
+
+[lints]
+workspace = true
