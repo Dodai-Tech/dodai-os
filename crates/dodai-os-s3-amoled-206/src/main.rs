@@ -46,7 +46,7 @@ const fn app(name: &'static str, requires: &[dodai_os_core::Capability]) -> AppI
 }
 
 /// Placeholder apps until the real ones are written.
-static APPS: [AppInfo; 6] = {
+static APPS: [AppInfo; 12] = {
     use dodai_os_core::Capability::{Battery, Ble, Display, Imu, Storage, Touch, Wifi};
     [
         app("Weather", &[Display, Wifi]),
@@ -55,6 +55,12 @@ static APPS: [AppInfo; 6] = {
         app("Compass", &[Display, Imu]),
         app("Battery", &[Display, Battery]),
         app("Files", &[Display, Storage, Ble]),
+        app("Timer", &[Display, Touch]),
+        app("Notes", &[Display, Touch, Storage]),
+        app("Music", &[Display, Touch]),
+        app("Maps", &[Display, Wifi]),
+        app("Camera", &[Display, Touch]),
+        app("Health", &[Display, Imu]),
     ]
 };
 

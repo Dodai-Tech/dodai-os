@@ -5,10 +5,12 @@
 //! comes in through `dodai-os-hal`; ESP-IDF and the native kernel are backends below it.
 #![cfg_attr(not(test), no_std)]
 
+pub mod anim;
 pub mod app;
 pub mod capability;
 pub mod touch;
 
+pub use anim::{Tween, ease_out_cubic, lerp};
 pub use app::{App, AppInfo, Effect, Event, runnable};
 pub use capability::{Capability, CapabilitySet};
 pub use touch::{Direction, Gesture, GestureConfig, GestureRecognizer, Phase, Point, TouchEvent};

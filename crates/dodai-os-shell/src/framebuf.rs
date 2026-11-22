@@ -6,7 +6,8 @@ use embedded_graphics::{
     Pixel,
     geometry::{OriginDimensions, Size},
     pixelcolor::{IntoStorage, Rgb565},
-    prelude::DrawTarget,
+    prelude::{DrawTarget, Point},
+    primitives::Rectangle,
 };
 
 /// An RGB565 framebuffer with row-level change tracking.
@@ -80,6 +81,22 @@ impl DrawTarget for FrameBuf<'_> {
     type Color = Rgb565;
     type Error = core::convert::Infallible;
 
+    fn fill_solid(&mut self, area: &Rectangle, color: Rgb565) -> Result<(), Self::Error> {
+        let area = area.intersection(&Rectangle::new(Point::zero(), self.size()));
+        let Some(bottom_right) = area.bottom_right() else {
+            return Ok(());
+        };
+        let w = usize::from(self.width);
+        let (x0, x1) = (area.top_left.x as usize, bottom_right.x as usize + 1);
+        let (y0, y1) = (area.top_left.y as usize, bottom_right.y as usize + 1);
+        let value = color.into_storage();
+        for row in y0..y1 {
+            self.pixels[row * w + x0..row * w + x1].fill(value);
+        }
+        self.touch_rows(y0 as u16, y1 as u16);
+        Ok(())
+    }
+
     fn draw_iter<I: IntoIterator<Item = Pixel<Rgb565>>>(
         &mut self,
         pixels: I,
@@ -148,6 +165,24 @@ mod tests {
                 .iter()
                 .all(|&p| p == Rgb565::BLUE.into_storage())
         );
+    }
+
+    #[test]
+    fn fill_solid_clips_to_the_buffer_and_marks_only_its_rows() {
+        let mut buf = [0u16; 20];
+        let mut fb = FrameBuf::new(4, 5, &mut buf).unwrap();
+        let area = Rectangle::new(Point::new(-3, 2), Size::new(6, 10));
+        fb.fill_solid(&area, Rgb565::GREEN).unwrap();
+        let green = Rgb565::GREEN.into_storage();
+        assert_eq!(fb.pixels().iter().filter(|&&p| p == green).count(), 3 * 3);
+        assert_eq!(fb.pixels()[2 * 4], green);
+        assert_eq!(fb.pixels()[2 * 4 + 3], 0, "outside the area on that row");
+        assert_eq!(fb.pixels()[1 * 4], 0, "rows above are untouched");
+        let (first, rows) = fb.take_dirty().unwrap();
+        assert_eq!((first, rows.len()), (2, 3 * 4));
+        let off = Rectangle::new(Point::new(10, 10), Size::new(2, 2));
+        fb.fill_solid(&off, Rgb565::RED).unwrap();
+        assert!(fb.take_dirty().is_none(), "a fill outside changes nothing");
     }
 
     #[test]

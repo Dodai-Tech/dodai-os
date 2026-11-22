@@ -52,21 +52,26 @@ impl<'a> Launcher<'a> {
 
     /// The apps on the current page, row by row.
     pub fn page_apps(&self) -> impl Iterator<Item = &'a AppInfo> {
+        self.apps_on(self.page)
+    }
+
+    /// The apps on `page`, row by row (empty past the last page); used to draw two pages while one
+    /// slides out and the other in.
+    pub fn apps_on(&self, page: usize) -> impl Iterator<Item = &'a AppInfo> {
         let per = self.per_page();
         runnable(self.board, self.apps)
-            .skip(self.page * per)
+            .skip(page.saturating_mul(per))
             .take(per)
     }
 
-    /// Moves a page for a horizontal swipe; true when the page changed.
+    /// Moves a page for a swipe (left or up: next, right or down: previous); true when the page changed.
     pub fn swipe(&mut self, dir: Direction) -> bool {
         let next = match dir {
-            Direction::Left => self.page + 1,
-            Direction::Right => match self.page.checked_sub(1) {
+            Direction::Left | Direction::Up => self.page + 1,
+            Direction::Right | Direction::Down => match self.page.checked_sub(1) {
                 Some(p) => p,
                 None => return false,
             },
-            Direction::Up | Direction::Down => return false,
         };
         if next >= self.page_count() {
             return false;
@@ -218,8 +223,12 @@ mod tests {
         assert_eq!(ids(l.page_apps()), ["c", "d"]);
         assert!(l.swipe(Direction::Left));
         assert!(!l.swipe(Direction::Left));
-        assert!(!l.swipe(Direction::Up));
+        assert!(!l.swipe(Direction::Up), "no page after the last");
         assert!(l.swipe(Direction::Right));
+        assert_eq!(l.page(), 1);
+        assert!(l.swipe(Direction::Down), "down goes back like right");
+        assert!(!l.swipe(Direction::Down));
+        assert!(l.swipe(Direction::Up), "up goes forward like left");
         assert_eq!(l.page(), 1);
     }
 
@@ -271,6 +280,15 @@ mod tests {
             s.on_gesture(Gesture::LongPress(Point::default())),
             Output::None
         );
+    }
+
+    #[test]
+    fn apps_on_any_page_including_out_of_range() {
+        let l = Launcher::new(BOARD, &APPS, 2, 1);
+        assert_eq!(ids(l.apps_on(1)), ["c", "d"]);
+        assert_eq!(ids(l.apps_on(2)), ["e"]);
+        assert_eq!(ids(l.apps_on(3)), Vec::<&str>::new());
+        assert_eq!(ids(l.apps_on(usize::MAX)), Vec::<&str>::new());
     }
 
     #[test]
