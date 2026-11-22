@@ -27,7 +27,7 @@ hardware only through capabilities the shell grants.
 | `dodai-os-core` | capabilities, touch gestures, the `App` contract | yes |
 | `dodai-os-hal` | `Display`, `Touch`, `Backlight`, `Clock`, `Board` traits | yes |
 | `dodai-os-shell-model` | launcher paging, hit testing, navigation (no UI toolkit) | yes |
-| `dodai-os-shell` (planned) | Slint view on the shell model | yes + alloc |
+| `dodai-os-shell` | view: status bar, app grid, app page, drawn with `embedded-graphics` on any RGB565 target | yes |
 | `dodai-os-kernel` | cooperative scheduler, message queues, capability table | yes |
 | `dodai-os-host` | hosted backend: device profiles, host clock and display | no |
 | `dodai-os-port-<arch>` (planned) | architecture-specific code | yes |
@@ -110,7 +110,7 @@ filtering are the same mechanism.
 * The kernel allocates nothing at run time: static tables, static stacks, sizes known at build.
 * Isolation uses the PMP (RISC-V) or MPU (Cortex-M) where it exists. Xtensa and the plain ESP32
   have none, so apps there are trusted, compiled-in code. This is stated, not hidden.
-* No microcode or GPU code: rendering is software (Slint's software renderer), with optional
+* No microcode or GPU code: rendering is software (`embedded-graphics` today; Slint is an optional view because its GPL or commercial license does not fit an MIT-only dependency policy), with optional
   2D accelerators such as the P4 PPA behind the `Display` trait.
 * Radio code is Espressif's closed library. Networking is a driver service wrapping it.
 * Every parser and state machine is unit-tested and fuzzed (`fuzz/`), and `just check-all`

@@ -13,8 +13,12 @@ of the design are in [ARCHITECTURE.md](ARCHITECTURE.md). Status: `[x]` done, `[ 
 - [x] `dodai-os-host`: device profiles (S3 AMOLED, round watch, P4 7in, headless, desktop), host clock and framebuffer display
 
 ## Phase 1: first device, hosted preview (ESP32-S3 AMOLED 2.06)
-- [ ] `dodai-os-host` window: draw the framebuffer, mouse as touch, `--device` frames (profiles exist)
-- [ ] `dodai-os-shell` with Slint on `dodai-os-shell-model`: home screen, app grid, status bar, theme from `dodai-core`
+- [x] `dodai-os-shell`: launcher grid, status bar and app page drawn with `embedded-graphics` (`no_std`), adapts to screen size
+- [x] `dodai-os-host`: `--png` screenshots with `--tap`, and a `window` feature (minifb, mouse as touch)
+- [ ] Theme from `dodai-core` tokens instead of the built-in dark colors
+- [ ] Status bar content (time, WiFi, battery) and a swipe-down quick settings panel
+- [ ] Round-screen layout (clip the grid to the circle on `Shape::Round`)
+- [ ] Optional Slint view for rich UIs (Slint is GPL or commercial, so it stays opt-in, never the default)
 - [ ] Run apps as kernel tasks: shell and apps talk to services by message over `dodai-os-kernel`
 - [ ] ESP-IDF backend for the S3 board: SH8601 display, touch, PMU, RTC, IMU (pins from Waveshare's BSP)
 - [ ] Apps: weather (`weathertrack-core`), clock, settings (WiFi, brightness, time, about)

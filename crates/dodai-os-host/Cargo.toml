@@ -15,9 +15,18 @@ publish = false
 name = "dodai_os_host"
 path = "src/lib.rs"
 
+[features]
+# A real window (minifb): mouse as touch. Off by default so CI needs no display libraries.
+window = ["dep:minifb"]
+
 [dependencies]
 dodai-os-core.workspace = true
 dodai-os-hal.workspace = true
+dodai-os-shell.workspace = true
+dodai-os-shell-model.workspace = true
+embedded-graphics.workspace = true
+png.workspace = true
+minifb = { workspace = true, optional = true }
 
 [lints]
 workspace = true

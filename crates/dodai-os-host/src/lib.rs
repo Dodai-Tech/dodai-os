@@ -2,10 +2,24 @@
 //! run in development without a board. Device profiles stand in for real devices (size, shape and
 //! the capabilities the device would have).
 
+use std::convert::Infallible;
 use std::time::Instant;
 
-use dodai_os_core::{Capability, CapabilitySet};
+use dodai_os_core::{
+    AppInfo, Capability, CapabilitySet, Gesture, GestureRecognizer, Phase, Point, TouchEvent,
+};
 use dodai_os_hal::{Clock, Display, Rect, Shape};
+use dodai_os_shell::Ui;
+use dodai_os_shell_model::Output;
+use embedded_graphics::{
+    Pixel,
+    geometry::{OriginDimensions, Size},
+    pixelcolor::{IntoStorage, Rgb565},
+    prelude::DrawTarget,
+};
+
+#[cfg(feature = "window")]
+pub mod window;
 
 /// A device the host can pretend to be.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -188,6 +202,175 @@ impl Display for HostDisplay {
     }
 }
 
+impl OriginDimensions for HostDisplay {
+    fn size(&self) -> Size {
+        Size::new(u32::from(self.width), u32::from(self.height))
+    }
+}
+
+impl DrawTarget for HostDisplay {
+    type Color = Rgb565;
+    type Error = Infallible;
+
+    fn draw_iter<I: IntoIterator<Item = Pixel<Rgb565>>>(
+        &mut self,
+        pixels: I,
+    ) -> Result<(), Infallible> {
+        let (w, h) = (i32::from(self.width), i32::from(self.height));
+        for Pixel(p, color) in pixels {
+            if p.x >= 0 && p.y >= 0 && p.x < w && p.y < h {
+                self.pixels[(p.y * w + p.x) as usize] = color.into_storage();
+            }
+        }
+        Ok(())
+    }
+}
+
+/// The apps the host offers while real ones are written. The launcher shows those a profile can run.
+pub const DEMO_APPS: [AppInfo; 8] = [
+    app("Weather", &[Capability::Display, Capability::Wifi]),
+    app("Clock", &[Capability::Display]),
+    app("Settings", &[Capability::Display, Capability::Touch]),
+    app("Compass", &[Capability::Display, Capability::Imu]),
+    app("Battery", &[Capability::Display, Capability::Battery]),
+    app("Pairing", &[Capability::Display, Capability::Ble]),
+    app(
+        "Notes",
+        &[Capability::Display, Capability::Touch, Capability::Storage],
+    ),
+    app("Files", &[Capability::Display, Capability::Storage]),
+];
+
+const fn app(name: &'static str, requires: &[Capability]) -> AppInfo {
+    AppInfo {
+        id: name,
+        name,
+        requires: CapabilitySet::of(requires),
+    }
+}
+
+/// A device profile running the shell: display, gesture recognizer and UI.
+#[derive(Debug)]
+pub struct Session {
+    profile: &'static DeviceProfile,
+    display: HostDisplay,
+    ui: Ui<'static>,
+    gestures: GestureRecognizer,
+}
+
+impl Session {
+    /// A session for `profile`, drawn once. `None` for a device without a screen.
+    #[must_use]
+    pub fn new(profile: &'static DeviceProfile) -> Option<Self> {
+        if !profile.has_screen() {
+            return None;
+        }
+        let mut session = Self {
+            profile,
+            display: HostDisplay::new(profile),
+            ui: Ui::new(
+                profile.capabilities,
+                &DEMO_APPS,
+                (profile.width, profile.height),
+            ),
+            gestures: GestureRecognizer::default(),
+        };
+        session.render();
+        Some(session)
+    }
+
+    /// The device being shown.
+    #[must_use]
+    pub const fn profile(&self) -> &'static DeviceProfile {
+        self.profile
+    }
+
+    /// The framebuffer.
+    #[must_use]
+    pub const fn display(&self) -> &HostDisplay {
+        &self.display
+    }
+
+    /// The shell, to inspect which screen is up.
+    #[must_use]
+    pub const fn ui(&self) -> &Ui<'static> {
+        &self.ui
+    }
+
+    /// Paints the shell into the framebuffer.
+    pub fn render(&mut self) {
+        // The framebuffer cannot fail to draw (`Infallible`).
+        let Ok(()) = self.ui.draw(&mut self.display);
+    }
+
+    fn apply(&mut self, gesture: Option<Gesture>) -> bool {
+        let Some(gesture) = gesture else { return false };
+        let changed = self.ui.on_gesture(gesture) != Output::None;
+        if changed {
+            self.render();
+        }
+        changed
+    }
+
+    /// Feeds one touch sample (a mouse press, move or release); true when the screen changed.
+    pub fn touch(&mut self, event: TouchEvent) -> bool {
+        let gesture = self.gestures.feed(event);
+        self.apply(gesture)
+    }
+
+    /// Lets time pass so a held touch becomes a long press; true when the screen changed.
+    pub fn tick(&mut self, now_ms: u32) -> bool {
+        let gesture = self.gestures.tick(now_ms);
+        self.apply(gesture)
+    }
+
+    /// A quick tap at `(x, y)`, as a test or a screenshot script would do.
+    pub fn tap(&mut self, x: i16, y: i16) -> bool {
+        let point = Point { x, y };
+        self.touch(TouchEvent {
+            phase: Phase::Down,
+            point,
+            t_ms: 0,
+        });
+        self.touch(TouchEvent {
+            phase: Phase::Up,
+            point,
+            t_ms: 50,
+        })
+    }
+}
+
+/// The framebuffer as 8-bit RGB, three bytes per pixel.
+#[must_use]
+pub fn rgb888(display: &HostDisplay) -> Vec<u8> {
+    display
+        .pixels()
+        .iter()
+        .flat_map(|&p| {
+            let (r, g, b) = ((p >> 11) & 0x1f, (p >> 5) & 0x3f, p & 0x1f);
+            [
+                (r << 3 | r >> 2) as u8,
+                (g << 2 | g >> 4) as u8,
+                (b << 3 | b >> 2) as u8,
+            ]
+        })
+        .collect()
+}
+
+/// The framebuffer as a PNG file.
+///
+/// # Errors
+/// Returns the encoder error if writing fails.
+pub fn png_bytes(display: &HostDisplay) -> Result<Vec<u8>, png::EncodingError> {
+    let (w, h) = Display::size(display);
+    let mut out = Vec::new();
+    let mut encoder = png::Encoder::new(&mut out, u32::from(w), u32::from(h));
+    encoder.set_color(png::ColorType::Rgb);
+    encoder.set_depth(png::BitDepth::Eight);
+    encoder.write_header()?.write_image_data(&rgb888(display))?;
+    Ok(out)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -220,8 +403,8 @@ mod tests {
     #[test]
     fn display_flush_copies_rows_and_rejects_bad_areas() {
         let mut d = HostDisplay::new(DeviceProfile::by_name("watch-round").unwrap());
-        assert_eq!(d.size(), (466, 466));
-        assert_eq!(d.shape(), Shape::Round);
+        assert_eq!(Display::size(&d), (466, 466));
+        assert_eq!(Display::shape(&d), Shape::Round);
         let area = Rect {
             x: 1,
             y: 2,
@@ -246,6 +429,84 @@ mod tests {
             ),
             Err(BadFlush)
         );
+    }
+
+    #[test]
+    fn session_launches_an_app_from_a_tap_and_goes_back() {
+        let mut s = Session::new(DeviceProfile::by_name("s3-amoled-2.06").unwrap()).unwrap();
+        let before = s.display().pixels().to_vec();
+        assert!(s.tap(300, 36 + 20), "second card: Clock");
+        assert!(
+            matches!(s.ui().shell().screen(), dodai_os_shell_model::Screen::App(a) if a.name == "Clock")
+        );
+        assert_ne!(s.display().pixels(), before.as_slice());
+        assert!(s.tap(10, 10), "status bar goes back");
+        assert_eq!(s.display().pixels(), before.as_slice());
+        assert!(!s.tap(10, 10), "nothing to go back from");
+    }
+
+    #[test]
+    fn launcher_only_lists_apps_the_device_can_run() {
+        let watch = Session::new(DeviceProfile::by_name("watch-round").unwrap()).unwrap();
+        let names: Vec<_> = watch
+            .ui()
+            .shell()
+            .launcher()
+            .page_apps()
+            .map(|a| a.name)
+            .collect();
+        assert!(
+            names.contains(&"Compass") && !names.contains(&"Weather"),
+            "{names:?}"
+        );
+    }
+
+    #[test]
+    fn long_press_is_swallowed_without_changing_the_screen() {
+        let mut s = Session::new(DeviceProfile::by_name("desktop").unwrap()).unwrap();
+        let point = Point { x: 50, y: 100 };
+        s.touch(TouchEvent {
+            phase: Phase::Down,
+            point,
+            t_ms: 0,
+        });
+        assert!(!s.tick(600));
+        assert!(!s.touch(TouchEvent {
+            phase: Phase::Up,
+            point,
+            t_ms: 700
+        }));
+    }
+
+    #[test]
+    fn headless_has_no_session() {
+        assert!(Session::new(DeviceProfile::by_name("headless").unwrap()).is_none());
+    }
+
+    #[test]
+    fn png_has_signature_and_decodes_to_the_screen_size() {
+        let s = Session::new(DeviceProfile::by_name("watch-round").unwrap()).unwrap();
+        let bytes = png_bytes(s.display()).unwrap();
+        assert_eq!(&bytes[..8], b"\x89PNG\r\n\x1a\n");
+        let decoder = png::Decoder::new(std::io::Cursor::new(&bytes));
+        let reader = decoder.read_info().unwrap();
+        assert_eq!((reader.info().width, reader.info().height), (466, 466));
+    }
+
+    #[test]
+    fn rgb888_expands_565_to_full_range() {
+        let mut d = HostDisplay::new(DeviceProfile::by_name("p4-7in").unwrap());
+        d.flush(
+            Rect {
+                x: 0,
+                y: 0,
+                w: 2,
+                h: 1,
+            },
+            &[0xffff, 0x0000],
+        )
+        .unwrap();
+        assert_eq!(&rgb888(&d)[..6], &[255, 255, 255, 0, 0, 0]);
     }
 
     #[test]
