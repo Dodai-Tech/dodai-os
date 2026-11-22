@@ -30,7 +30,7 @@ of the design are in [ARCHITECTURE.md](ARCHITECTURE.md). Status: `[x]` done, `[ 
 
 ## Toolkit track: Fusuma (renderer and toolkit)
 - [x] Fusuma repo (`~/Projects/fusuma`), with the renderer as separate `fusuma-render*` crates: `Renderer` trait, `fusuma-render-embedded` (integer, `no_std`), `fusuma-render-skia` (anti-aliased), shared conformance suite, fuzzed
-- [ ] Publish `fusuma-render` 0.1 to crates.io, then replace the path dependencies on `../fusuma` here (CI cannot build this repo until then)
+- [x] `fusuma-render`, `-embedded` and `-skia` 0.1.0 published to crates.io; this repo uses them by version
 - [x] `dodai-os-shell` draws through `fusuma-render`'s `Renderer`: the S3 uses the integer backend, the host can use the anti-aliased one (`--renderer skia`)
 - [x] Time-driven transitions in the shell: page slide, app open and close (`Ui::on_gesture(g, now)`, `Ui::tick`, 220 ms ease-out); the host takes pictures at a chosen time with `--at MS`
 - [ ] Measure the frame rate of a slide on the S3 (a slide redraws the whole screen each frame) and use partial updates if it is too low
