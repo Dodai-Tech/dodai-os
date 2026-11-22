@@ -35,6 +35,25 @@ hardware only through capabilities the shell grants.
 Design tokens and themes come from `dodai-core` (the `dodai-ui` repo); the OS never reuses
 that name.
 
+## Products
+
+| Product | What it is | Built on |
+|---|---|---|
+| **Dodai OS** | Own microkernel and app platform, staged by hardware: RISC-V ESPs first, then Xtensa, ARM, x86, open or unlockable phones, tablets and watches | own kernel (ESP-IDF while bootstrapping) |
+| **Dodai DE** | Desktop and mobile shell in Rust: Wayland compositor, panel, launcher, settings | Linux (probably Smithay) |
+| **Dodai Linux** | Arch-based distribution that ships Dodai DE: installer, package repo, `archiso` images | Arch Linux |
+
+Shared by all three: `dodai-core` and `dodai-ui` (tokens, themes, widgets), `dodai-os-core`
+(`no_std`: capabilities, gestures, the `App` contract), the shell model (launcher, navigation,
+settings pages, notifications; UI-toolkit independent) and the apps. Not shared: the HAL
+(devices only; the DE gets input and display from libinput, DRM and Wayland), the kernel, ports
+and board crates (Dodai OS only), the compositor, session, packaging and installer (DE and Linux).
+
+Rule: a shared crate has no platform dependency. Each product supplies a thin adapter.
+"Any hardware" means any hardware that has a port and drivers: per device, not automatic.
+Desktop-class hardware (GPU, Wi-Fi, USB, audio) is the long tail for the native kernel, so
+Dodai Linux covers desktops and laptops first.
+
 ## Run modes
 
 One set of apps, shell, capabilities and HAL traits; only the layer under the HAL changes.

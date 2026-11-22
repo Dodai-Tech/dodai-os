@@ -21,7 +21,7 @@ of the design are in [ARCHITECTURE.md](ARCHITECTURE.md). Status: `[x]` done, `[ 
 - [ ] ESP32-C6, headless: console shell and background services
 - [ ] Board profiles in TOML; the launcher lists only apps a board can run
 
-## Phase 3: native kernel (standalone)
+## Phase 3: native kernel (standalone), RISC-V ESPs first
 - [ ] `dodai-os-kernel`: static scheduler, IPC, capability table (host-testable)
 - [ ] QEMU RISC-V port in CI with a hello-world service
 - [ ] `esp-hal` + `esp-wifi` backend on the C6 and P4, replacing ESP-IDF
@@ -32,6 +32,18 @@ of the design are in [ARCHITECTURE.md](ARCHITECTURE.md). Status: `[x]` done, `[ 
 - [ ] Hosted on Linux, macOS and Windows (x86 and ARM) as a product, not only a preview
 - [ ] Standalone on Raspberry Pi and QEMU ARM (`virt`)
 - [ ] Standalone on x86_64 (QEMU `q35`): UEFI framebuffer, VirtIO, then real PCs
+
+### Dodai DE track (parallel to phase 4)
+- [ ] Split `dodai-os-shell` into `dodai-os-shell-model` (pure logic) and the Slint view
+- [ ] Wayland compositor prototype (Smithay), panel and launcher on the shell model
+- [ ] Session that starts from a display manager; settings app shared with Dodai OS
+- [ ] Own repos: `dodai-de`; `dodai-os` keeps only the portable crates
+
+### Dodai Linux (Arch-based)
+- [ ] `archiso` image that boots into Dodai DE, built by a nightly in CI
+- [ ] PKGBUILD repo and `pacman` repository for the DE and the shared apps
+- [ ] First-boot setup and installer
+- [ ] Own repo: `dodai-linux`
 
 ## Phase 5: phones and wearables
 - [ ] Hosted on Android and iOS as an app
