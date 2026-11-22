@@ -186,6 +186,9 @@ dependencies = [
 [[package]]
 name = "dodai-os-core"
 version = "0.1.0"
+dependencies = [
+ "fusuma-anim",
+]
 
 [[package]]
 name = "dodai-os-drivers"
@@ -800,6 +803,12 @@ checksum = "4e639847d312d9a82d2e75b0edcc1e934efcc64e6cb7aa94f0b1fbec0bc231d6"
 dependencies = [
  "gcd",
 ]
+
+[[package]]
+name = "fusuma-anim"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9893b7f09c2802ced351fcf96bd862aca55635499ed321423284520414e4cb9b"
 
 [[package]]
 name = "fusuma-render"

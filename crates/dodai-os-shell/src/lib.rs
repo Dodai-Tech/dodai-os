@@ -9,7 +9,8 @@ use core::fmt::Write;
 pub mod framebuf;
 pub use framebuf::FrameBuf;
 
-use dodai_os_core::{AppInfo, CapabilitySet, Gesture, Point as TouchPoint, Tween, lerp};
+use dodai_os_core::anim::{Easing, Fx, Tween};
+use dodai_os_core::{AppInfo, CapabilitySet, Gesture, Point as TouchPoint};
 use dodai_os_shell_model::{Launcher, Output, Screen, Shell};
 use fusuma_render::{Align, Color, Point, Rect, Renderer, TextStyle};
 
@@ -90,6 +91,11 @@ struct Anim<'a> {
     tween: Tween,
 }
 
+/// `from` to `to` at progress `p` (0 to 1), in whole pixels.
+fn slide(from: i32, to: i32, p: Fx) -> i32 {
+    Fx::from_int(from).lerp(Fx::from_int(to), p).round()
+}
+
 /// The whole shell on a screen of a given size.
 #[derive(Clone, Copy, Debug)]
 pub struct Ui<'a> {
@@ -153,7 +159,7 @@ impl<'a> Ui<'a> {
             }
             other => self.shell.on_gesture(other),
         };
-        let tween = Tween::new(now_ms, SLIDE_MS);
+        let tween = Tween::new(Fx::ZERO, Fx::ONE, now_ms, SLIDE_MS, Easing::CubicOut);
         let motion = match (out, was_in) {
             (Output::Launch(_), _) => Some(Motion::Open),
             (Output::Redraw, Some(app)) => Some(Motion::Close(app)),
@@ -185,10 +191,9 @@ impl<'a> Ui<'a> {
         true
     }
 
-    /// Eased progress of the running transition in permille (1000 when there is none).
-    fn progress(&self, now_ms: u32) -> u16 {
-        self.anim
-            .map_or(dodai_os_core::anim::FULL, |a| a.tween.eased(now_ms))
+    /// Eased progress of the running transition, 0 to 1 (1 when there is none).
+    fn progress(&self, now_ms: u32) -> Fx {
+        self.anim.map_or(Fx::ONE, |a| a.tween.value(now_ms))
     }
 
     /// Paints the screen as it looks at `now_ms`: settled, or part-way through a slide.
@@ -218,17 +223,17 @@ impl<'a> Ui<'a> {
         let (p, page) = (self.progress(now_ms), self.shell.launcher().page());
         match (self.shell.screen(), self.anim.map(|a| a.motion)) {
             (Screen::Launcher, Some(Motion::Page { from, to })) => {
-                let (dir, shift) = (if to > from { 1 } else { -1 }, lerp(0, w, p));
+                let (dir, shift) = (if to > from { 1 } else { -1 }, slide(0, w, p));
                 self.in_layer(r, -dir * shift, |r| self.draw_page(r, &text, grid, from))?;
                 self.in_layer(r, dir * (w - shift), |r| self.draw_page(r, &text, grid, to))?;
             }
             (Screen::Launcher, Some(Motion::Close(app))) => {
                 self.in_layer(r, 0, |r| self.draw_page(r, &text, grid, page))?;
-                self.in_layer(r, lerp(0, w, p), |r| self.draw_app(r, &text, app, (w, h)))?;
+                self.in_layer(r, slide(0, w, p), |r| self.draw_app(r, &text, app, (w, h)))?;
             }
             (Screen::App(app), Some(Motion::Open)) => {
                 self.in_layer(r, 0, |r| self.draw_page(r, &text, grid, page))?;
-                self.in_layer(r, lerp(w, 0, p), |r| self.draw_app(r, &text, app, (w, h)))?;
+                self.in_layer(r, slide(w, 0, p), |r| self.draw_app(r, &text, app, (w, h)))?;
             }
             (Screen::Launcher, _) => self.draw_page(r, &text, grid, page)?,
             (Screen::App(app), _) => self.draw_app(r, &text, app, (w, h))?,
@@ -348,7 +353,7 @@ mod tests {
     use super::*;
     use dodai_os_core::{
         Capability::{Display, Touch},
-        Direction, ease_out_cubic, lerp,
+        Direction,
     };
     use fusuma_render::Probe;
     use fusuma_render_embedded::{Embedded, Frame};
@@ -553,7 +558,7 @@ mod tests {
         u.on_gesture(SWIPE_LEFT, 0);
         let now = SLIDE_MS / 4;
         let mid = render(&u, now);
-        let shift = lerp(0, 410, ease_out_cubic(250));
+        let shift = slide(0, 410, Easing::CubicOut.apply(Fx::from_ratio(1, 4)));
         assert!(
             (100..300).contains(&shift),
             "the test needs a real mid-slide frame: {shift}"

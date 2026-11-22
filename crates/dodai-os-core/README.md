@@ -8,5 +8,5 @@ Portable heart of Dodai OS: the capability model, touch gestures, time-driven an
 
 * `Capability` and `CapabilitySet`: what a board offers and what an app needs; `runnable(board, apps)` picks the apps a board can run.
 * `GestureRecognizer`: raw touch events in, tap, long press and swipe out.
-* `Tween`, `ease_out_cubic`, `lerp`: integer animation driven by a clock.
+* `anim`: [`fusuma-anim`](https://crates.io/crates/fusuma-anim) re-exported: easing, tweens, keyframes, springs and fling decay in fixed point, driven by a clock.
 * `App`, `Event`, `Effect`: an app is a state machine, events in and effects out.
