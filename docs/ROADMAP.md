@@ -28,23 +28,21 @@ of the design are in [ARCHITECTURE.md](ARCHITECTURE.md). Status: `[x]` done, `[ 
 - [ ] Apps: weather (`weathertrack-core`), clock, settings (WiFi, brightness, time, about)
 - [ ] Settings: Bluetooth, OTA updates, sleep and wake, battery
 
-## Toolkit track: Fusuma (renderer and toolkit)
-- [x] Fusuma repo (`~/Projects/fusuma`), with the renderer as separate `fusuma-render*` crates: `Renderer` trait, `fusuma-render-embedded` (integer, `no_std`), `fusuma-render-skia` (anti-aliased), shared conformance suite, fuzzed
-- [x] `fusuma-render`, `-embedded` and `-skia` 0.1.0 published to crates.io; this repo uses them by version
-- [x] `dodai-os-shell` draws through `fusuma-render`'s `Renderer`: the S3 uses the integer backend, the host can use the anti-aliased one (`--renderer skia`)
-- [x] Time-driven transitions in the shell: page slide, app open and close (`Ui::on_gesture(g, now)`, `Ui::tick`, 220 ms ease-out); the host takes pictures at a chosen time with `--at MS`
-- [ ] Measure the frame rate of a slide on the S3 (a slide redraws the whole screen each frame) and use partial updates if it is too low
-- [ ] `fusuma-render-skia`: anti-aliased vector fonts for the `tiny-skia` backend, and glyph atlases for MCUs
-- [ ] `fusuma-render-vello`, GPU backend behind a feature, passing the same conformance suite
-- [ ] `fusuma-*` crates in the same repo: widget tree, `taffy` layout, event and focus routing, theme from the design tokens
-- [ ] Fusuma widgets: label, button, toggle, slider, list with scrolling, dialog; rebuild the launcher and settings on them
-- [ ] Text stack in pure Rust (`parley` + `skrifa`, or `cosmic-text` + `swash`): shaping, fonts, wrapping
-- [ ] Text input with an input method (`winit` events) and accessibility (`AccessKit`) in the widgets
-- [ ] `fusuma-platform-mcu` (Dodai OS boards) and `fusuma-platform-desktop` (`winit`)
-- [ ] `fusuma-platform-android` and `fusuma-platform-ios`: native windows, no web wrapper
-- [ ] `dodai-ui-fusuma`: the Dodai UI design system for Fusuma, as one more `dodai-ui-<toolkit>` adapter
-- [ ] `fusuma-platform-web` (later, optional): WebAssembly drawn into a canvas, no DOM widgets
+## Toolkit track: Fusuma (renderer, animation and toolkit)
+The full plan, crate structure and decisions are in the Fusuma repository: `docs/ROADMAP.md`.
+- [x] Fusuma repo (`~/Projects/fusuma`): `fusuma-render` (the `Renderer` trait), `fusuma-render-embedded` (integer, `no_std`), `fusuma-render-vello-cpu` and `-vello-common` (`vello_cpu`), a shared conformance suite, fuzzed
+- [x] `fusuma-anim`: easing, tweens, keyframes, springs and fling decay in fixed point (`no_std`)
+- [x] `dodai-os-shell` draws through `fusuma-render`'s `Renderer`: the S3 uses the integer backend, the host can use the anti-aliased one
+- [x] Time-driven transitions in the shell (`dodai-os-core::anim`, 220 ms ease-out)
+- [ ] Publish `fusuma-render-vello-cpu` and `-vello-common`, switch the host's `--renderer skia` to `vello-cpu` (`fusuma-render-skia` 0.1.0 stays on crates.io, unmaintained)
+- [ ] Move `dodai-os-core::anim` onto `fusuma-anim`, and use springs for page and app transitions
+- [ ] `fusuma-render-vello` (GPU), then effects (shadow, blur, gradients) and shaders as optional capabilities; the shader engine reuses `dodai-ui-shaders`
+- [ ] Experiment: run `vello_cpu` on the S3 (it builds there with `libm`) and compare with the integer renderer
+- [ ] Fusuma toolkit: widget tree, `taffy` layout, events, text, widgets; rebuild the launcher and settings on them
+- [ ] `dodai-ui-fusuma`: Dodai UI for Fusuma, as one more `dodai-ui-<toolkit>` adapter, with a `ShaderView`
+- [ ] `fusuma-platform-mcu` (Dodai OS boards), `-desktop`, `-android`, `-ios`, `-tui`, and later `-web`
 - [ ] `dodai-ui-fx`: its `Painter` trait overlaps the `Renderer` of `fusuma-render`; draw effects through it
+- [ ] Measure the frame rate of a slide on the S3 and use partial updates if it is too low
 
 ## Phase 2: more boards
 - [ ] ESP32-P4 7" touch display (`riscv32imafc`, esp_hosted WiFi)

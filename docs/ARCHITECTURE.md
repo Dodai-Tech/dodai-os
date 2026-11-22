@@ -64,7 +64,7 @@ name, so each can be used without the others.
 | House part | Product | Name | Notes |
 |---|---|---|---|
 | Foundation 土台 | OS with its own microkernel | **Dodai OS** (`dodai-os-*`) | this repo |
-| Sliding doors 襖 | UI toolkit and its renderer | **Fusuma** | OS-agnostic. The renderer exists and is called `fusuma-render` (`-embedded`, `-skia`, later `-vello`); the widgets, layout and animation (`fusuma-*`) are planned. One repo, `fusuma`. |
+| Sliding doors 襖 | UI toolkit and its renderer | **Fusuma** | OS-agnostic. Renderer: `fusuma-render` (the trait), `-embedded` (microcontrollers), `-vello-cpu` and later `-vello` (GPU); animation: `fusuma-anim`; widgets, layout, text, effects and shaders (`fusuma-*`) are planned. One repo, `fusuma`; apps depend on one `fusuma` crate and the backend is chosen by target. See its `docs/ROADMAP.md`. |
 | Finish | design system | **Dodai UI** (`dodai-ui-*`) | tokens, four designs, one adapter crate per toolkit, including `dodai-ui-fusuma` |
 | Roof tiles 瓦 | desktop and mobile environment | **Kawara** | Linux, Wayland. Planned. |
 | Shop curtain 暖簾 | app store | **Noren** | front end over Flatpak and pacman; a store for Dodai OS is research. Planned. |
@@ -82,9 +82,20 @@ Naming rules:
 
 ## Rendering and platforms: native Rust, no web technology
 
-Everything draws through `fusuma-render`: `fusuma-render-embedded` (our integer rasteriser, `no_std`),
-`fusuma-render-skia` (`tiny-skia`, a pure-Rust Skia port) and later `fusuma-render-vello` (`vello` on
-`wgpu`). There is no webview, HTML or CSS in Fusuma, and the C++ Skia is not used.
+Everything draws through `fusuma-render`:
+
+| Situation | Backend |
+|---|---|
+| Microcontroller with a pixel display | `fusuma-render-embedded` (our integer rasteriser, `no_std`) |
+| Desktop, phone, watch, with a GPU | `fusuma-render-vello` (`vello_gpu`), planned |
+| The same without a usable GPU; screenshots and tests | `fusuma-render-vello-cpu` (`vello_cpu`) |
+| Terminal, serial console, character displays | `fusuma-platform-tui`, planned: a semantic front end on ratatui, not a pixel backend |
+
+The two Vello backends share one implementation of the `Renderer` trait. There is no webview, HTML
+or CSS in Fusuma, and the C++ Skia is not used (the `tiny-skia` backend was dropped). Animation
+(easing, tweens, keyframes, springs, fling decay) is built in as `fusuma-anim`, in fixed-point maths
+so that it runs the same without an FPU. Effects (shadow, blur, gradients) and shaders are optional
+capabilities that a backend reports; widgets fall back to a plain fill without them.
 
 Fusuma reaches each target through a small platform crate:
 
@@ -155,7 +166,7 @@ filtering are the same mechanism.
 * The kernel allocates nothing at run time: static tables, static stacks, sizes known at build.
 * Isolation uses the PMP (RISC-V) or MPU (Cortex-M) where it exists. Xtensa and the plain ESP32
   have none, so apps there are trusted, compiled-in code. This is stated, not hidden.
-* No microcode or GPU code: rendering is software (through `fusuma-render`: `embedded-graphics` on microcontrollers, `tiny-skia` elsewhere; Slint stays an optional view because its GPL or commercial license does not fit an MIT-only dependency policy), with optional
+* No microcode or GPU code: rendering is software (through `fusuma-render`: the integer renderer on microcontrollers, Vello elsewhere; Slint stays an optional view because its GPL or commercial license does not fit an MIT-only dependency policy), with optional
   2D accelerators such as the P4 PPA behind the `Display` trait.
 * Radio code is Espressif's closed library. Networking is a driver service wrapping it.
 * Every parser and state machine is unit-tested and fuzzed (`fuzz/`), and `just check-all`
