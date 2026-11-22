@@ -15,7 +15,7 @@ use dodai_os_core::{AppInfo, CapabilitySet, GestureRecognizer};
 use dodai_os_drivers::{co5300::Co5300, ft3168::Ft3168};
 use dodai_os_hal::{Clock, Display, Rect, Touch};
 use dodai_os_shell::{FrameBuf, Ui};
-use tokonoma_embedded::Embedded;
+use fusuma_render_embedded::Embedded;
 use esp_backtrace as _;
 use esp_hal::{
     clock::CpuClock,
@@ -117,7 +117,7 @@ fn main() -> ! {
     let (w, h) = Display::size(&display);
     let pixels = vec![0u16; usize::from(w) * usize::from(h)].leak();
     let Some(fb) = FrameBuf::new(w, h, pixels) else { panic!("framebuffer size") };
-    // Tokonoma's integer backend draws into it and the framebuffer tracks the rows that changed.
+    // Fusuma's integer renderer draws into it and the framebuffer tracks the rows that changed.
     let mut canvas = Embedded::new(fb);
 
     let mut ui = Ui::new(board::CAPABILITIES, &APPS, (w, h));

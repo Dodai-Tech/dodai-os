@@ -10,7 +10,7 @@ use std::process::ExitCode;
 
 use dodai_os_host::{DeviceProfile, PROFILES, Session, png_bytes, png_skia};
 
-/// Which Tokonoma backend draws the PNG.
+/// Which Fusuma renderer backend draws the PNG.
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 enum Backend {
     /// The integer backend the boards use, on a 16-bit framebuffer.

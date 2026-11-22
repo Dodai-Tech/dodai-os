@@ -126,11 +126,11 @@ dependencies = [
  "dodai-os-shell",
  "dodai-os-shell-model",
  "embedded-graphics",
+ "fusuma-render",
+ "fusuma-render-embedded",
+ "fusuma-render-skia",
  "minifb",
  "png",
- "tokonoma",
- "tokonoma-embedded",
- "tokonoma-skia",
 ]
 
 [[package]]
@@ -147,9 +147,9 @@ dependencies = [
  "dodai-os-core",
  "dodai-os-shell-model",
  "embedded-graphics",
- "tokonoma",
- "tokonoma-embedded",
- "tokonoma-skia",
+ "fusuma-render",
+ "fusuma-render-embedded",
+ "fusuma-render-skia",
 ]
 
 [[package]]
@@ -221,6 +221,28 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "98de4bbd547a563b716d8dfa9aad1cb19bfab00f4fa09a6a4ed21dbcf44ce9c4"
 dependencies = [
  "num-traits",
+]
+
+[[package]]
+name = "fusuma-render"
+version = "0.1.0"
+
+[[package]]
+name = "fusuma-render-embedded"
+version = "0.1.0"
+dependencies = [
+ "embedded-graphics",
+ "fusuma-render",
+]
+
+[[package]]
+name = "fusuma-render-skia"
+version = "0.1.0"
+dependencies = [
+ "embedded-graphics",
+ "fusuma-render",
+ "fusuma-render-embedded",
+ "tiny-skia",
 ]
 
 [[package]]
@@ -643,28 +665,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b52fd3255258d26fac7264ab5a76b53c13367136dc011d3d6ad4f8ed070396a3"
 dependencies = [
  "pin-project-lite",
-]
-
-[[package]]
-name = "tokonoma"
-version = "0.1.0"
-
-[[package]]
-name = "tokonoma-embedded"
-version = "0.1.0"
-dependencies = [
- "embedded-graphics",
- "tokonoma",
-]
-
-[[package]]
-name = "tokonoma-skia"
-version = "0.1.0"
-dependencies = [
- "embedded-graphics",
- "tiny-skia",
- "tokonoma",
- "tokonoma-embedded",
 ]
 
 [[package]]

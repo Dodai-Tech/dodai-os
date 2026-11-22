@@ -36,10 +36,10 @@ dodai-os-shell = { path = "crates/dodai-os-shell", version = "0.1.0" }
 dodai-os-drivers = { path = "crates/dodai-os-drivers", version = "0.1.0" }
 embedded-hal = "1.0"
 embedded-graphics = "0.8.2"
-# Tokonoma lives in ../fusuma (private until it is published to crates.io; then drop the paths).
-tokonoma = { path = "../fusuma/crates/tokonoma", version = "0.1.0" }
-tokonoma-embedded = { path = "../fusuma/crates/tokonoma-embedded", version = "0.1.0" }
-tokonoma-skia = { path = "../fusuma/crates/tokonoma-skia", version = "0.1.0" }
+# The renderer crates live in ../fusuma (private until it is published to crates.io; then drop the paths).
+fusuma-render = { path = "../fusuma/crates/fusuma-render", version = "0.1.0" }
+fusuma-render-embedded = { path = "../fusuma/crates/fusuma-render-embedded", version = "0.1.0" }
+fusuma-render-skia = { path = "../fusuma/crates/fusuma-render-skia", version = "0.1.0" }
 minifb = { version = "0.29", default-features = false, features = ["x11"] }
 png = "0.18"
 dodai-os-host = { path = "crates/dodai-os-host", version = "0.1.0" }

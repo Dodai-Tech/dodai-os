@@ -64,15 +64,14 @@ name, so each can be used without the others.
 | House part | Product | Name | Notes |
 |---|---|---|---|
 | Foundation 土台 | OS with its own microkernel | **Dodai OS** (`dodai-os-*`) | this repo |
-| Sliding doors 襖 | UI toolkit | **Fusuma** | OS-agnostic: layout, widgets, animation. Planned; the repo `fusuma` already exists and holds Tokonoma. |
-| Alcove 床の間 | renderer | **Tokonoma** | OS-agnostic: `tokonoma` (trait), `-embedded`, `-skia`, later `-vello`. Lives in the Fusuma repo as separate crates; a CI rule keeps it independent of the toolkit. |
+| Sliding doors 襖 | UI toolkit and its renderer | **Fusuma** | OS-agnostic. The renderer exists and is called `fusuma-render` (`-embedded`, `-skia`, later `-vello`); the widgets, layout and animation (`fusuma-*`) are planned. One repo, `fusuma`. |
 | Finish | design system | **Dodai UI** (`dodai-ui-*`) | tokens, four designs, one adapter crate per toolkit, including `dodai-ui-fusuma` |
 | Roof tiles 瓦 | desktop and mobile environment | **Kawara** | Linux, Wayland. Planned. |
 | Shop curtain 暖簾 | app store | **Noren** | front end over Flatpak and pacman; a store for Dodai OS is research. Planned. |
 | The house | Arch-based distribution | **Dodai Linux** | ships Kawara and Noren. Planned. |
 
-Dependencies point one way: Dodai OS and Kawara use Fusuma, Fusuma uses Tokonoma, and Tokonoma
-knows nothing above it. `dodai-ui-fusuma` uses Fusuma and the design tokens; Fusuma never imports
+Dependencies point one way: Dodai OS and Kawara use Fusuma, the toolkit crates use `fusuma-render`, and
+`fusuma-render*` knows nothing above it; a CI rule in the Fusuma repo enforces that. `dodai-ui-fusuma` uses Fusuma and the design tokens; Fusuma never imports
 `dodai-ui-*`.
 
 Naming rules:
@@ -83,8 +82,8 @@ Naming rules:
 
 ## Rendering and platforms: native Rust, no web technology
 
-Everything draws through Tokonoma: `tokonoma-embedded` (our integer rasteriser, `no_std`),
-`tokonoma-skia` (`tiny-skia`, a pure-Rust Skia port) and later `tokonoma-vello` (`vello` on
+Everything draws through `fusuma-render`: `fusuma-render-embedded` (our integer rasteriser, `no_std`),
+`fusuma-render-skia` (`tiny-skia`, a pure-Rust Skia port) and later `fusuma-render-vello` (`vello` on
 `wgpu`). There is no webview, HTML or CSS in Fusuma, and the C++ Skia is not used.
 
 Fusuma reaches each target through a small platform crate:
@@ -156,7 +155,7 @@ filtering are the same mechanism.
 * The kernel allocates nothing at run time: static tables, static stacks, sizes known at build.
 * Isolation uses the PMP (RISC-V) or MPU (Cortex-M) where it exists. Xtensa and the plain ESP32
   have none, so apps there are trusted, compiled-in code. This is stated, not hidden.
-* No microcode or GPU code: rendering is software (through Tokonoma: `embedded-graphics` on microcontrollers, `tiny-skia` elsewhere; Slint stays an optional view because its GPL or commercial license does not fit an MIT-only dependency policy), with optional
+* No microcode or GPU code: rendering is software (through `fusuma-render`: `embedded-graphics` on microcontrollers, `tiny-skia` elsewhere; Slint stays an optional view because its GPL or commercial license does not fit an MIT-only dependency policy), with optional
   2D accelerators such as the P4 PPA behind the `Display` trait.
 * Radio code is Espressif's closed library. Networking is a driver service wrapping it.
 * Every parser and state machine is unit-tested and fuzzed (`fuzz/`), and `just check-all`

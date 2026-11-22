@@ -25,9 +25,9 @@ dodai-os-hal.workspace = true
 dodai-os-shell.workspace = true
 dodai-os-shell-model.workspace = true
 embedded-graphics.workspace = true
-tokonoma.workspace = true
-tokonoma-embedded.workspace = true
-tokonoma-skia.workspace = true
+fusuma-render.workspace = true
+fusuma-render-embedded.workspace = true
+fusuma-render-skia.workspace = true
 png.workspace = true
 minifb = { workspace = true, optional = true }
 

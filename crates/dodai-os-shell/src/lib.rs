@@ -1,5 +1,5 @@
 //! The Dodai OS shell view: a status bar, the app grid and a foreground-app page, drawn through
-//! Tokonoma's `Renderer` trait. The same code draws on a microcontroller display (integer backend),
+//! Fusuma's `Renderer` trait. The same code draws on a microcontroller display (integer backend),
 //! in a host window and into a PNG (anti-aliased backend). Logic (paging, hit testing, navigation)
 //! lives in `dodai-os-shell-model`; this crate only lays out and paints it.
 #![cfg_attr(not(test), no_std)]
@@ -11,7 +11,7 @@ pub use framebuf::FrameBuf;
 
 use dodai_os_core::{AppInfo, CapabilitySet, Gesture, Point as TouchPoint};
 use dodai_os_shell_model::{Launcher, Output, Screen, Shell};
-use tokonoma::{Align, Color, Point, Rect, Renderer, TextStyle};
+use fusuma_render::{Align, Color, Point, Rect, Renderer, TextStyle};
 
 /// Colors of the shell. Dodai design tokens will fill these in.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -221,8 +221,8 @@ mod tests {
         Capability::{Display, Touch},
         Direction,
     };
-    use tokonoma::Probe;
-    use tokonoma_embedded::{Embedded, Frame};
+    use fusuma_render::Probe;
+    use fusuma_render_embedded::{Embedded, Frame};
 
     const fn app(name: &'static str) -> AppInfo {
         AppInfo {
@@ -347,7 +347,7 @@ mod tests {
         let u = ui();
         let mut a = screen(410, 502);
         u.draw(&mut a).unwrap();
-        let mut b = tokonoma_skia::Skia::new(410, 502).unwrap();
+        let mut b = fusuma_render_skia::Skia::new(410, 502).unwrap();
         u.draw(&mut b).unwrap();
         // Compare the flat areas; rounded corners and discs differ at their edges only.
         let near = |p: Color, q: Color| {

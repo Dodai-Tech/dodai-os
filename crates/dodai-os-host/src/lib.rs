@@ -17,8 +17,8 @@ use embedded_graphics::{
     pixelcolor::{IntoStorage, Rgb565},
     prelude::DrawTarget,
 };
-use tokonoma::Renderer;
-use tokonoma_embedded::Embedded;
+use fusuma_render::Renderer;
+use fusuma_render_embedded::Embedded;
 
 #[cfg(feature = "window")]
 pub mod window;
@@ -382,14 +382,14 @@ pub fn png_bytes(display: &HostDisplay) -> Result<Vec<u8>, png::EncodingError> {
     Ok(out)
 }
 
-/// The current screen drawn with the anti-aliased backend (`tokonoma-skia`), as a PNG file. The
+/// The current screen drawn with the anti-aliased backend (`fusuma-render-skia`), as a PNG file. The
 /// shell code is the same as on the boards; only the renderer differs.
 ///
 /// # Errors
 /// A message when the surface cannot exist or the encoder fails.
 pub fn png_skia(session: &Session) -> Result<Vec<u8>, String> {
     let p = session.profile();
-    let mut skia = tokonoma_skia::Skia::new(u32::from(p.width), u32::from(p.height))
+    let mut skia = fusuma_render_skia::Skia::new(u32::from(p.width), u32::from(p.height))
         .ok_or_else(|| "the device has no screen".to_owned())?;
     session.draw_with(&mut skia).map_err(|e| format!("{e:?}"))?;
     skia.png().map_err(|e| e.0)
