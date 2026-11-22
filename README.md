@@ -37,7 +37,8 @@ computer with the same code.
 
 The first seven are workspace members. The two firmware crates need the ESP toolchain, so they are
 excluded and built with their own `.cargo/config.toml` and `rust-toolchain.toml`. The renderer
-crates come from [`fusuma-render`](https://crates.io/crates/fusuma-render) on crates.io.
+crates come from [Fusuma](https://github.com/Dodai-Tech/fusuma) on crates.io: `fusuma-render-embedded` on
+the board, `fusuma-render-vello-cpu` for the host's anti-aliased screenshots.
 
 ## Prerequisites
 
@@ -53,6 +54,7 @@ just native-install         # build the esp-hal firmware, install it in OTA slot
 just native-restore         # boot the native firmware again (erases only the otadata partition)
 just native-monitor         # serial monitor
 cargo run -p dodai-os-host -- --device s3-amoled-2.06 --tap 300,56 --at 60 --png shot.png
+cargo run -p dodai-os-host -- --device watch-round --renderer vello-cpu --png shot.png
 cargo run -p dodai-os-host --features window -- --device watch-round --window
 ```
 

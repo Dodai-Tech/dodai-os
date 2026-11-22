@@ -399,17 +399,19 @@ pub fn png_bytes(display: &HostDisplay) -> Result<Vec<u8>, png::EncodingError> {
     Ok(out)
 }
 
-/// The current screen drawn with the anti-aliased backend (`fusuma-render-skia`), as a PNG file. The
+/// The current screen drawn with the anti-aliased backend (`fusuma-render-vello-cpu`), as a PNG file. The
 /// shell code is the same as on the boards; only the renderer differs.
 ///
 /// # Errors
 /// A message when the surface cannot exist or the encoder fails.
-pub fn png_skia(session: &Session) -> Result<Vec<u8>, String> {
+pub fn png_vello_cpu(session: &Session) -> Result<Vec<u8>, String> {
     let p = session.profile();
-    let mut skia = fusuma_render_skia::Skia::new(u32::from(p.width), u32::from(p.height))
+    let mut vello = fusuma_render_vello_cpu::new(u32::from(p.width), u32::from(p.height))
         .ok_or_else(|| "the device has no screen".to_owned())?;
-    session.draw_with(&mut skia).map_err(|e| format!("{e:?}"))?;
-    skia.png().map_err(|e| e.0)
+    session
+        .draw_with(&mut vello)
+        .map_err(|e| format!("{e:?}"))?;
+    fusuma_render_vello_cpu::png(&vello).map_err(|e| e.0)
 }
 
 #[cfg(test)]
@@ -575,7 +577,7 @@ mod tests {
     fn the_anti_aliased_png_has_the_screen_size_and_differs_from_the_panel_one() {
         let mut s = Session::new(DeviceProfile::by_name("s3-amoled-2.06").unwrap()).unwrap();
         s.tap(300, 56);
-        let smooth = png_skia(&s).unwrap();
+        let smooth = png_vello_cpu(&s).unwrap();
         assert_eq!(&smooth[..8], b"\x89PNG\r\n\x1a\n");
         let decoder = png::Decoder::new(std::io::Cursor::new(&smooth));
         let reader = decoder.read_info().unwrap();

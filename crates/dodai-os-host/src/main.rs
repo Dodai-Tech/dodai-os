@@ -2,13 +2,13 @@
 //!
 //! ```text
 //! dodai-os-host --list
-//! dodai-os-host --device watch-round --png out.png [--tap X,Y]... [--renderer embedded|skia] [--at MS]
+//! dodai-os-host --device watch-round --png out.png [--tap X,Y]... [--renderer embedded|vello-cpu] [--at MS]
 //! dodai-os-host --device p4-7in --window        (needs --features window)
 //! ```
 
 use std::process::ExitCode;
 
-use dodai_os_host::{DeviceProfile, PROFILES, Session, png_bytes, png_skia};
+use dodai_os_host::{DeviceProfile, PROFILES, Session, png_bytes, png_vello_cpu};
 
 /// Which Fusuma renderer backend draws the PNG.
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
@@ -17,7 +17,7 @@ enum Backend {
     #[default]
     Embedded,
     /// The anti-aliased backend.
-    Skia,
+    VelloCpu,
 }
 
 #[derive(Debug, Default, PartialEq, Eq)]
@@ -64,8 +64,10 @@ fn parse(args: impl IntoIterator<Item = String>) -> Result<Options, String> {
             "--renderer" => {
                 o.renderer = match value("--renderer")?.as_str() {
                     "embedded" => Backend::Embedded,
-                    "skia" => Backend::Skia,
-                    other => return Err(format!("unknown renderer '{other}'; embedded or skia")),
+                    "vello-cpu" => Backend::VelloCpu,
+                    other => {
+                        return Err(format!("unknown renderer '{other}'; embedded or vello-cpu"));
+                    }
                 }
             }
             "--tap" => o.taps.push(parse_tap(&value("--tap")?)?),
@@ -95,7 +97,7 @@ fn run(o: &Options) -> Result<(), String> {
     if let Some(path) = &o.png {
         let bytes = match o.renderer {
             Backend::Embedded => png_bytes(session.display()).map_err(|e| e.to_string())?,
-            Backend::Skia => png_skia(&session)?,
+            Backend::VelloCpu => png_vello_cpu(&session)?,
         };
         std::fs::write(path, bytes).map_err(|e| format!("{path}: {e}"))?;
         eprintln!("wrote {path}");
@@ -150,8 +152,8 @@ mod tests {
             parse(args("--png a.png")).unwrap().renderer,
             Backend::Embedded
         );
-        let o = parse(args("--renderer skia")).unwrap();
-        assert_eq!(o.renderer, Backend::Skia);
+        let o = parse(args("--renderer vello-cpu")).unwrap();
+        assert_eq!(o.renderer, Backend::VelloCpu);
         assert!(parse(args("--renderer vello")).is_err());
         assert!(parse(args("--renderer")).is_err());
     }
@@ -160,7 +162,7 @@ mod tests {
     fn both_renderers_write_a_png() {
         let dir = std::env::temp_dir().join(format!("dodai-host-{}", std::process::id()));
         std::fs::create_dir_all(&dir).unwrap();
-        for backend in ["embedded", "skia"] {
+        for backend in ["embedded", "vello-cpu"] {
             let path = dir.join(format!("{backend}.png"));
             let cmd = format!(
                 "--device watch-round --renderer {backend} --tap 200,150 --png {}",

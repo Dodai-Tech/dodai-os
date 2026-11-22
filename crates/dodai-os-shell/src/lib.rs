@@ -476,7 +476,7 @@ mod tests {
         let u = ui();
         let mut a = screen(410, 502);
         u.draw(&mut a, 10_000).unwrap();
-        let mut b = fusuma_render_skia::Skia::new(410, 502).unwrap();
+        let mut b = fusuma_render_vello_cpu::new(410, 502).unwrap();
         u.draw(&mut b, 10_000).unwrap();
         // Compare the flat areas; rounded corners and discs differ at their edges only.
         let near = |p: Color, q: Color| {
@@ -671,7 +671,7 @@ mod tests {
         u.on_gesture(SWIPE_LEFT, 0);
         let mut a = screen(410, 502);
         u.draw(&mut a, SLIDE_MS / 4).unwrap();
-        let mut b = fusuma_render_skia::Skia::new(410, 502).unwrap();
+        let mut b = fusuma_render_vello_cpu::new(410, 502).unwrap();
         u.draw(&mut b, SLIDE_MS / 4).unwrap();
         let near = |p: Color, q: Color| {
             p.r.abs_diff(q.r) <= 10 && p.g.abs_diff(q.g) <= 10 && p.b.abs_diff(q.b) <= 10

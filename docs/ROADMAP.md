@@ -34,9 +34,10 @@ The full plan, crate structure and decisions are in the Fusuma repository: `docs
 - [x] `fusuma-anim`: easing, tweens, keyframes, springs and fling decay in fixed point (`no_std`)
 - [x] `dodai-os-shell` draws through `fusuma-render`'s `Renderer`: the S3 uses the integer backend, the host can use the anti-aliased one
 - [x] Time-driven transitions in the shell (`dodai-os-core::anim`, 220 ms ease-out)
-- [ ] Publish `fusuma-render-vello-cpu` and `-vello-common`, switch the host's `--renderer skia` to `vello-cpu` (`fusuma-render-skia` 0.1.0 stays on crates.io, unmaintained)
+- [x] Fusuma 0.2.0 published (`fusuma-render`, `-embedded`, `-vello-common`, `-vello-cpu`, `-vello`, `fusuma-anim`); the host's `--renderer` is now `embedded` or `vello-cpu` (`fusuma-render-skia` 0.1.0 stays on crates.io, unmaintained)
+- [ ] Host: `--renderer vello-gpu` behind a `gpu` feature, using `fusuma-render-vello`
 - [ ] Move `dodai-os-core::anim` onto `fusuma-anim`, and use springs for page and app transitions
-- [ ] `fusuma-render-vello` (GPU), then effects (shadow, blur, gradients) and shaders as optional capabilities; the shader engine reuses `dodai-ui-shaders`
+- [x] `fusuma-render-vello` (GPU backend) exists and passes the conformance suite; effects (shadow, blur, gradients) and shaders come next as optional capabilities, and the shader engine reuses `dodai-ui-shaders`
 - [ ] Experiment: run `vello_cpu` on the S3 (it builds there with `libm`) and compare with the integer renderer
 - [ ] Fusuma toolkit: widget tree, `taffy` layout, events, text, widgets; rebuild the launcher and settings on them
 - [ ] `dodai-ui-fusuma`: Dodai UI for Fusuma, as one more `dodai-ui-<toolkit>` adapter, with a `ShaderView`

@@ -26,7 +26,7 @@ dodai-os-shell-model.workspace = true
 embedded-graphics.workspace = true
 fusuma-render.workspace = true
 fusuma-render-embedded.workspace = true
-fusuma-render-skia.workspace = true
+fusuma-render-vello-cpu.workspace = true
 png.workspace = true
 minifb = { workspace = true, optional = true }
 

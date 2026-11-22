@@ -803,15 +803,15 @@ dependencies = [
 
 [[package]]
 name = "fusuma-render"
-version = "0.1.0"
+version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7ece7d0699617dff0d24ec2f6c03cc6c019c1276656c59c080cb997d2c2ae07f"
+checksum = "134d8be1f087a0d356277a8cae0e4c326c29c3a73c3bdb0509c3e10cc0a35c24"
 
 [[package]]
 name = "fusuma-render-embedded"
-version = "0.1.0"
+version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "eeb8880f82b61a193952b8d2df222900f74ca330c5b79717fcd88d8ac5be73d9"
+checksum = "c2bfd81f2ac749e6540e64b12ff7018b71c983b99727419252abaf822313b2c7"
 dependencies = [
  "embedded-graphics",
  "fusuma-render",
