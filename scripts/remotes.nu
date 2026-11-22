@@ -15,7 +15,7 @@
 
 export const REMOTES = {
     origin: "git@github.com:Dodai-Tech/dodai-os.git"
-    gitea-starscream: "gitea@192.168.1.44:sorin/dodai-os.git"
+    gitea-starscream: "gitea@192.168.1.44:Dodai-Tech/dodai-os.git"
     codeberg: "ssh://git@codeberg.org/Dodai-Tech/dodai-os.git"
 }
 

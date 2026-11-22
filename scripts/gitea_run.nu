@@ -7,7 +7,7 @@
 # Usage: nu scripts/gitea_run.nu <workflow>     e.g. deps-update | security | fuzz
 # ──────────────────────────────────────────────────────────────────────────────
 
-export const REPO = "sorin/dodai-os"
+export const REPO = "Dodai-Tech/dodai-os"
 
 export def dispatch_url [base: string, workflow: string] {
     let file = if ($workflow | str ends-with ".yml") { $workflow } else { $"($workflow).yml" }
