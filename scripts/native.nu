@@ -6,8 +6,12 @@
 # it. The bootloader, the partition table and the native firmware are not touched, and
 # `native` erases `otadata` so the bootloader falls back to the factory app.
 #
+# Verified on the Waveshare ESP32-S3-Touch-AMOLED-2.06 (32 MB flash): the slot must lie in the first
+# 16 MB. `ota_1` at 0x1000000 is skipped by the bootloader, which falls back to the other slot.
+# An otadata entry with a wrong CRC makes the bootloader erase otadata and boot the factory app.
+#
 #   nu scripts/native.nu build   [--board s3-amoled-206]
-#   nu scripts/native.nu install [--board B] [--slot ota_1] [--port P]
+#   nu scripts/native.nu install [--board B] [--slot ota_0] [--port P]
 #   nu scripts/native.nu native  [--port P]
 #   nu scripts/native.nu monitor [--port P]
 # ──────────────────────────────────────────────────────────────────────────────
@@ -28,9 +32,11 @@ export def board [name: string]: nothing -> record {
     $r | first
 }
 
-# CRC-32 (the zlib/IEEE one) of `data`, as the bootloader computes it for an otadata entry.
-export def crc32 [data: binary]: nothing -> int {
-    mut crc = 0xFFFFFFFF
+# CRC-32 (IEEE) of `data` with the ROM's calling convention: `init` is the "previous result", 0 for a
+# plain CRC (the zlib value). The bootloader checks an otadata entry with init 0xFFFFFFFF, which is
+# a different value than zlib's; a wrong one makes it erase otadata and boot the factory app.
+export def crc32 [data: binary, init: int = 0]: nothing -> int {
+    mut crc = $init bit-xor 0xFFFFFFFF
     for i in 0..<($data | bytes length) {
         $crc = $crc bit-xor ($data | bytes at $i..<($i + 1) | into int)
         for _ in 0..<8 {
@@ -50,7 +56,7 @@ export def le_bytes [n: int, width: int]: nothing -> binary {
 export def otadata_entry [seq: int]: nothing -> binary {
     if $seq < 1 { error make { msg: "otadata sequence starts at 1" } }
     let label = 0..<20 | each { 0x[ff] } | bytes collect
-    [(le_bytes $seq 4) $label (le_bytes 0xFFFFFFFF 4) (le_bytes (crc32 (le_bytes $seq 4)) 4)] | bytes collect
+    [(le_bytes $seq 4) $label (le_bytes 0xFFFFFFFF 4) (le_bytes (crc32 (le_bytes $seq 4) 0xFFFFFFFF) 4)] | bytes collect
 }
 
 # The otadata sequence that selects `ota_N`: the bootloader boots slot `(seq - 1) mod slots`.
@@ -77,11 +83,14 @@ export def check_fits [part: record, bytes: int] {
 # The cross-compiler and clang that `espup install` set up, as an env record for `with-env`.
 export def esp_env [home: path]: nothing -> record {
     let toolchain = $home | path join .rustup toolchains esp
-    let gcc = glob ($toolchain | path join xtensa-esp-elf "*" xtensa-esp-elf bin) | sort | last
-    let clang = glob ($toolchain | path join xtensa-esp32-elf-clang "*" esp-clang lib) | sort | last
+    let gcc = glob ($toolchain | path join xtensa-esp-elf "*" xtensa-esp-elf bin) | sort
+    let clang = glob ($toolchain | path join xtensa-esp32-elf-clang "*" esp-clang lib) | sort
+    if ($gcc | is-empty) or ($clang | is-empty) {
+        error make { msg: $"no Xtensa toolchain under ($toolchain); run `espup install`" }
+    }
     {
-        PATH: ($env.PATH | prepend $gcc)
-        LIBCLANG_PATH: $clang
+        PATH: ($env.PATH | prepend ($gcc | last))
+        LIBCLANG_PATH: ($clang | last)
     }
 }
 
@@ -98,11 +107,11 @@ def elf_path [b: record]: nothing -> path { crate_dir $b | path join target $b.t
 def "main build" [--board: string = "s3-amoled-206"] {
     let b = board $board
     cd (crate_dir $b)
-    with-env (esp_env .home-dir) { ^cargo build --release }
+    with-env (esp_env $nu.home-dir) { ^cargo build --release }
 }
 
 # Writes the image to an OTA slot and selects it. The bootloader and the partition table stay.
-def "main install" [--board: string = "s3-amoled-206", --slot: string = "ota_1", --port: string = ""] {
+def "main install" [--board: string = "s3-amoled-206", --slot: string = "ota_0", --port: string = ""] {
     let b = board $board
     let seq = slot_seq $slot
     main build --board $board

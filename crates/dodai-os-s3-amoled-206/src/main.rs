@@ -117,7 +117,13 @@ fn main() -> ! {
     flush(&mut display, &mut fb);
     log::info!("shell drawn; waiting for touch");
 
+    let mut next_beat = BootClock.now_ms();
     loop {
+        let now = BootClock.now_ms();
+        if now.wrapping_sub(next_beat) < u32::MAX / 2 {
+            log::info!("alive {} s, screen {:?}", now / 1000, ui.shell().screen());
+            next_beat = now.wrapping_add(1000);
+        }
         let mut redraw = false;
         if let Ok(Some(event)) = touch.poll() {
             if let Some(gesture) = gestures.feed(event) {

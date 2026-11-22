@@ -22,8 +22,9 @@ of the design are in [ARCHITECTURE.md](ARCHITECTURE.md). Status: `[x]` done, `[ 
 - [ ] Run apps as kernel tasks: shell and apps talk to services by message over `dodai-os-kernel`
 - [x] `dodai-os-drivers` (`no_std`, embedded-hal, host-tested with fake buses): CO5300 AMOLED and FT3168 touch
 - [ ] Drivers: AXP2101 power, PCF85063 RTC, QMI8658 IMU
-- [ ] `dodai-os-board-s3-amoled-206` on `esp-hal` (`no_std`, no ESP-IDF): QSPI bus with DMA, I2C, pins, framebuffer in PSRAM
-- [ ] Firmware that shows the shell on the S3 board and reacts to touch (needs the `esp` Rust toolchain, `espup install`)
+- [x] `dodai-os-s3-amoled-206` on `esp-hal` (`no_std`, no ESP-IDF): QSPI bus with DMA, I2C, pins, framebuffer in PSRAM
+- [x] Firmware boots from an OTA slot next to the native firmware (`just native-install`, `just native-restore`)
+- [ ] Confirm on the screen: launcher drawn correctly, taps and swipes work, even-aligned windows not needed
 - [ ] Apps: weather (`weathertrack-core`), clock, settings (WiFi, brightness, time, about)
 - [ ] Settings: Bluetooth, OTA updates, sleep and wake, battery
 

@@ -17,6 +17,12 @@ def "test native: crc32 matches the standard check values" [] {
     assert equal (crc32 0x[00 00 00 00]) 0x2144DF1C
 }
 
+def "test native: crc32 with the ROM's initial value matches ESP-IDF's otadata crc" [] {
+    # binascii.crc32(struct.pack('<I', seq), 0xFFFFFFFF), the formula of IDF's otatool.py
+    assert equal (crc32 0x[01 00 00 00] 0xFFFFFFFF) 0x4743989A
+    assert equal (crc32 0x[02 00 00 00] 0xFFFFFFFF) 0x55F63774
+}
+
 def "test native: little-endian bytes" [] {
     assert equal (le_bytes 0x01020304 4) 0x[04 03 02 01]
     assert equal (le_bytes 0xFFFFFFFF 4) 0x[ff ff ff ff]
@@ -29,7 +35,7 @@ def "test native: an otadata entry is 32 bytes with the sequence and its crc" []
     assert equal ($e | bytes at 0..<4) 0x[02 00 00 00]
     assert equal ($e | bytes at 4..<24) (0..<20 | each { 0x[ff] } | bytes collect)
     assert equal ($e | bytes at 24..<28) 0x[ff ff ff ff]
-    assert equal ($e | bytes at 28..<32) (le_bytes (crc32 0x[02 00 00 00]) 4)
+    assert equal ($e | bytes at 28..<32) 0x[74 37 f6 55]
     assert (try { otadata_entry 0; false } catch { true })
 }
 
@@ -56,6 +62,13 @@ def "test native: esp_env puts the toolchain first and finds clang" [] {
     let e = esp_env $home
     assert equal ($e.PATH | first) $gcc
     assert equal $e.LIBCLANG_PATH $clang
+    rm -rf $home
+}
+
+def "test native: a missing toolchain is a clear error" [] {
+    let home = mktemp --directory
+    let msg = try { esp_env $home; "" } catch {|e| $e.msg }
+    assert ($msg | str contains "espup install")
     rm -rf $home
 }
 

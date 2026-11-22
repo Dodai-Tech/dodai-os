@@ -69,7 +69,7 @@ native-build board="s3-amoled-206":
     nu scripts/native.nu build --board {{ board }}
 
 # Install it into an OTA slot and select it; bootloader, partition table and native firmware stay
-native-install board="s3-amoled-206" slot="ota_1" port="":
+native-install board="s3-amoled-206" slot="ota_0" port="":
     nu scripts/native.nu install --board {{ board }} --slot {{ slot }} --port "{{ port }}"
 
 # Boot the board's native firmware again (erases otadata only)
