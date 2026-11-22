@@ -1,6 +1,7 @@
 [package]
 name = "dodai-os-s3-amoled-206"
 description = "Dodai OS firmware for the Waveshare ESP32-S3-Touch-AMOLED-2.06 (esp-hal, no_std, no ESP-IDF)"
+readme = "README.md"
 version = "0.1.0"
 edition = "2024"
 license = "MIT"

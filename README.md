@@ -2,11 +2,19 @@
 
 [![CI](https://github.com/Dodai-Tech/dodai-os/actions/workflows/ci.yml/badge.svg)](https://github.com/Dodai-Tech/dodai-os/actions/workflows/ci.yml)
 [![Security](https://github.com/Dodai-Tech/dodai-os/actions/workflows/security.yml/badge.svg)](https://github.com/Dodai-Tech/dodai-os/actions/workflows/security.yml)
+[![MSRV](https://img.shields.io/badge/MSRV-1.90-blue.svg)](Cargo.toml)
+[![no_std](https://img.shields.io/badge/core-no__std-success.svg)](crates/dodai-os-core)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-A small, portable app platform and launcher for ESP-Rust boards
+A small, portable app platform with its own microkernel, launcher and drivers for ESP-Rust boards,
+built to grow to other chips (ARM, x86) and devices. Dodai (土台) means foundation: the other layers
+of the Dodai family, [Fusuma](https://github.com/Dodai-Tech/fusuma) for the interface and
+[Dodai UI](https://github.com/Dodai-Tech/dodai-ui) for the design system, sit on it.
 
-ESP32 firmware in Rust (esp-idf, std) with a host-testable core.
+It runs today on the Waveshare ESP32-S3-Touch-AMOLED-2.06: a launcher with a status bar, an app
+grid, touch gestures and slide transitions, on `esp-hal` with no ESP-IDF. Everything that is not
+hardware is `no_std`, host-testable and fuzzed, and the shell also runs in a window or a PNG on your
+computer with the same code.
 
 ## Docs
 
@@ -15,27 +23,37 @@ ESP32 firmware in Rust (esp-idf, std) with a host-testable core.
 
 ## Layout
 
-| Crate | Chip | Rust target | Flash |
-|---|---|---|---|
-| `dodai-os-core` | any (host-testable, fuzzed) | host | — |
-| `dodai-os-esp32s3` | esp32s3 | `xtensa-esp32s3-espidf` | 32 MB |
+| Crate | What | `no_std` |
+|---|---|---|
+| [`dodai-os-core`](crates/dodai-os-core) | capabilities, gestures, animation, the `App` contract | yes |
+| [`dodai-os-hal`](crates/dodai-os-hal) | `Display`, `Touch`, `Backlight`, `Clock`, `Board` traits | yes |
+| [`dodai-os-kernel`](crates/dodai-os-kernel) | cooperative scheduler, message queues, capability table | yes |
+| [`dodai-os-shell-model`](crates/dodai-os-shell-model) | launcher paging, hit testing, navigation | yes |
+| [`dodai-os-shell`](crates/dodai-os-shell) | the view: status bar, grid, slide transitions, via `fusuma-render` | yes |
+| [`dodai-os-drivers`](crates/dodai-os-drivers) | CO5300 display and FT3168 touch drivers | yes |
+| [`dodai-os-host`](crates/dodai-os-host) | the shell on a desktop: profiles, PNG, window | no |
+| [`dodai-os-s3-amoled-206`](crates/dodai-os-s3-amoled-206) | firmware for the Waveshare S3 AMOLED 2.06 (`esp-hal`) | yes |
+| [`dodai-os-esp32s3`](crates/dodai-os-esp32s3) | sample ESP-IDF firmware | no |
 
-The core is the only workspace member. Firmware crates need the ESP toolchain, so they are
-excluded from the workspace and built with their own `.cargo/config.toml` and `rust-toolchain.toml`.
+The first seven are workspace members. The two firmware crates need the ESP toolchain, so they are
+excluded and built with their own `.cargo/config.toml` and `rust-toolchain.toml`. The renderer
+crates come from `fusuma-render` (see the note in Development).
 
 ## Prerequisites
 
 - [Rust](https://rustup.rs), [just](https://github.com/casey/just), [nu](https://www.nushell.sh), [git-cliff](https://github.com/orhun/git-cliff)
-- `cargo install espup ldproxy espflash`; for Xtensa chips (esp32, s2, s3) run `espup install` and `. ~/export-esp.sh`
-- The firmware's pinned nightly installs itself on first build (ESP-IDF v5.5.6 downloads to `~/.espressif`: 10+ min, ~350 MB)
+- `cargo install espup espflash`; for Xtensa chips (esp32, s2, s3) run `espup install`
+- Only the sample ESP-IDF firmware also needs `ldproxy`; its pinned nightly installs itself on first build (ESP-IDF downloads to `~/.espressif`: 10+ min, ~350 MB)
 
 ## Use
 
 ```sh
-just backup          # save the board's current firmware before the first flash
-just flash           # build (release), flash and open the serial monitor
-just monitor         # serial monitor only
-just check-firmware  # build every firmware crate
+just backup                 # save the board's native firmware before the first install
+just native-install         # build the esp-hal firmware, install it in OTA slot 0 and boot it
+just native-restore         # boot the native firmware again (erases only the otadata partition)
+just native-monitor         # serial monitor
+cargo run -p dodai-os-host -- --device s3-amoled-2.06 --tap 300,56 --at 60 --png shot.png
+cargo run -p dodai-os-host --features window -- --device watch-round --window
 ```
 
 Probe the board first: `espflash board-info --port /dev/ttyACM0` (chip, revision, flash size must match the crate).
@@ -50,7 +68,10 @@ Troubleshooting lives in the `esp-boards-rust` skill (`references/pitfalls.md`).
 | `just audit` / `just deny` | Known vulnerabilities / licenses, bans, sources |
 | `just bump X.Y.Z` | Bump the version, update the changelog, commit and tag |
 
-Firmware is not built in CI (the ESP toolchain is slow and large): run `just check-firmware` before a release.
+Firmware is not built in CI (the ESP toolchain is slow and large): run `just native-build` before a release.
+
+Until `fusuma-render` is on crates.io, this workspace takes it by path from `../fusuma`, so clone
+[`fusuma`](https://github.com/Dodai-Tech/fusuma) next to this repository; CI cannot build without it.
 Commits follow [Conventional Commits](https://www.conventionalcommits.org); `CHANGELOG.md` is generated by git-cliff.
 
 ## License

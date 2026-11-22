@@ -1,3 +1,5 @@
+//! The public API as a user of the crate sees it.
+
 use dodai_os_core::{
     AppInfo, Capability, CapabilitySet, Gesture, GestureRecognizer, Phase, Point, TouchEvent,
     runnable,

@@ -1,7 +1,7 @@
 [package]
 name = "dodai-os-core"
 description = "A small, portable app platform and launcher for ESP-Rust boards (platform-agnostic core: testable and fuzzable on any host)"
-readme = "../../README.md"
+readme = "README.md"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true

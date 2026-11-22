@@ -1,7 +1,7 @@
 [package]
 name = "dodai-os-host"
 description = "Dodai OS hosted backend: runs on Linux, macOS and Windows with device profiles for development"
-readme = "../../README.md"
+readme = "README.md"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
