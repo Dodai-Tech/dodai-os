@@ -1,0 +1,24 @@
+[package]
+name = "dodai-os-drivers"
+description = "Peripheral drivers for Dodai OS over embedded-hal (CO5300 AMOLED, FT3168 touch), host-tested with fake buses (no_std)"
+readme = "../../README.md"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+publish = false
+
+[lib]
+name = "dodai_os_drivers"
+path = "src/lib.rs"
+
+[dependencies]
+dodai-os-core.workspace = true
+dodai-os-hal.workspace = true
+embedded-hal.workspace = true
+
+[lints]
+workspace = true

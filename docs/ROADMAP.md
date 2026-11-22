@@ -20,7 +20,10 @@ of the design are in [ARCHITECTURE.md](ARCHITECTURE.md). Status: `[x]` done, `[ 
 - [ ] Round-screen layout (clip the grid to the circle on `Shape::Round`)
 - [ ] Optional Slint view for rich UIs (Slint is GPL or commercial, so it stays opt-in, never the default)
 - [ ] Run apps as kernel tasks: shell and apps talk to services by message over `dodai-os-kernel`
-- [ ] ESP-IDF backend for the S3 board: SH8601 display, touch, PMU, RTC, IMU (pins from Waveshare's BSP)
+- [x] `dodai-os-drivers` (`no_std`, embedded-hal, host-tested with fake buses): CO5300 AMOLED and FT3168 touch
+- [ ] Drivers: AXP2101 power, PCF85063 RTC, QMI8658 IMU
+- [ ] `dodai-os-board-s3-amoled-206` on `esp-hal` (`no_std`, no ESP-IDF): QSPI bus with DMA, I2C, pins, framebuffer in PSRAM
+- [ ] Firmware that shows the shell on the S3 board and reacts to touch (needs the `esp` Rust toolchain, `espup install`)
 - [ ] Apps: weather (`weathertrack-core`), clock, settings (WiFi, brightness, time, about)
 - [ ] Settings: Bluetooth, OTA updates, sleep and wake, battery
 
