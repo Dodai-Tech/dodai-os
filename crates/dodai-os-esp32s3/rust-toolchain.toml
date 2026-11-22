@@ -1,0 +1,3 @@
+[toolchain]
+# Espressif's Rust fork with Xtensa support: `espup install`, then `. ~/export-esp.sh`.
+channel = "esp"

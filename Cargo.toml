@@ -1,0 +1,36 @@
+[workspace]
+resolver = "3"
+# Only host-testable code is a workspace member. Firmware crates need the ESP toolchain and
+# their own .cargo/config.toml + rust-toolchain.toml, so they are excluded and build on their own.
+members = ["crates/dodai-os-core"]
+exclude = [
+    "crates/dodai-os-esp32s3",
+]
+
+# One version for the core and the workspace; `just bump X.Y.Z` edits it. Firmware crates keep
+# their own version (they are not part of the release).
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.90"
+license = "MIT"
+authors = ["Sorin Albu-Irimies"]
+repository = "https://github.com/Dodai-Tech/dodai-os"
+homepage = "https://github.com/Dodai-Tech/dodai-os"
+
+[workspace.dependencies]
+dodai-os-core = { path = "crates/dodai-os-core", version = "0.1.0" }
+
+[workspace.lints.rust]
+unsafe_code = "forbid"
+missing_debug_implementations = "warn"
+
+[workspace.lints.clippy]
+dbg_macro = "warn"
+todo = "warn"
+unwrap_used = "warn"
+
+[profile.release]
+lto = true
+codegen-units = 1
+strip = true

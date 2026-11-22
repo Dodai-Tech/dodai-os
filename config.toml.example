@@ -1,0 +1,4 @@
+# Copy to config.toml (git-ignored). Baked into the firmware at build time.
+[wifi]
+ssid = "YOUR_WIFI_SSID"
+password = "YOUR_WIFI_PASSWORD"

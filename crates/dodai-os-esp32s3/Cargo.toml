@@ -1,0 +1,30 @@
+[package]
+name = "dodai-os-esp32s3"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+description = "A small, portable app platform and launcher for ESP-Rust boards — firmware for esp32s3"
+publish = false
+resolver = "2"
+
+# Not a workspace member: it needs the ESP toolchain (see .cargo/config.toml and rust-toolchain.toml).
+[[bin]]
+name = "dodai-os-esp32s3"
+harness = false
+
+[profile.release]
+opt-level = "s"
+
+[profile.dev]
+debug = true
+opt-level = "s"
+
+[dependencies]
+dodai-os-core = { path = "../dodai-os-core" }
+log = "0.4"
+anyhow = "1"
+esp-idf-svc = { version = "0.53", features = ["experimental"] }
+
+[build-dependencies]
+embuild = "0.33"
+toml = "0.8"

@@ -1,0 +1,16 @@
+/target/
+/dist/
+/RELEASE_NOTES.md
+/fuzz/target/
+/fuzz/corpus/
+/fuzz/artifacts/
+.DS_Store
+.codegraph/
+
+# ESP: build output, generated sdkconfig, flash dumps (they contain NVS), WiFi credentials
+**/.embuild/
+**/sdkconfig
+**/sdkconfig.old
+**/sdkconfig.defaults
+backups/
+/config.toml
