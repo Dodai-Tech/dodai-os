@@ -64,8 +64,8 @@ name, so each can be used without the others.
 | House part | Product | Name | Notes |
 |---|---|---|---|
 | Foundation 土台 | OS with its own microkernel | **Dodai OS** (`dodai-os-*`) | this repo |
-| Sliding doors 襖 | UI toolkit | **Fusuma** | OS-agnostic: layout, widgets, animation. Planned. |
-| Alcove 床の間 | renderer | **Tokonoma** | OS-agnostic: `tokonoma` (trait), `-embedded`, `-skia`, later `-vello`. Own repo. |
+| Sliding doors 襖 | UI toolkit | **Fusuma** | OS-agnostic: layout, widgets, animation. Planned; the repo `fusuma` already exists and holds Tokonoma. |
+| Alcove 床の間 | renderer | **Tokonoma** | OS-agnostic: `tokonoma` (trait), `-embedded`, `-skia`, later `-vello`. Lives in the Fusuma repo as separate crates; a CI rule keeps it independent of the toolkit. |
 | Finish | design system | **Dodai UI** (`dodai-ui-*`) | tokens, four designs, one adapter crate per toolkit, including `dodai-ui-fusuma` |
 | Roof tiles 瓦 | desktop and mobile environment | **Kawara** | Linux, Wayland. Planned. |
 | Shop curtain 暖簾 | app store | **Noren** | front end over Flatpak and pacman; a store for Dodai OS is research. Planned. |

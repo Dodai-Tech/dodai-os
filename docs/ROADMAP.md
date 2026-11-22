@@ -29,13 +29,13 @@ of the design are in [ARCHITECTURE.md](ARCHITECTURE.md). Status: `[x]` done, `[ 
 - [ ] Settings: Bluetooth, OTA updates, sleep and wake, battery
 
 ## Toolkit track: Tokonoma (renderer) and Fusuma (toolkit)
-- [x] Tokonoma repo: `Renderer` trait, `tokonoma-embedded` (integer, `no_std`), `tokonoma-skia` (anti-aliased), shared conformance suite, fuzzed
+- [x] Fusuma repo (`~/Projects/fusuma`), with Tokonoma inside as separate crates: `Renderer` trait, `tokonoma-embedded` (integer, `no_std`), `tokonoma-skia` (anti-aliased), shared conformance suite, fuzzed
 - [ ] Publish Tokonoma 0.1 to crates.io, then depend on it from this repo
 - [ ] Port `dodai-os-shell` to draw through `Renderer`, so one view runs on the S3 and in a host window
 - [ ] Time-driven transitions in the shell: page slide, app open and close (`dodai-os-core::anim` exists)
 - [ ] Tokonoma: anti-aliased vector fonts for the `tiny-skia` backend, and glyph atlases for MCUs
 - [ ] Tokonoma: `tokonoma-vello`, GPU backend behind a feature, passing the same conformance suite
-- [ ] Fusuma repo: widget tree, `taffy` layout, event and focus routing, theme from the design tokens
+- [ ] `fusuma-*` crates in the same repo: widget tree, `taffy` layout, event and focus routing, theme from the design tokens
 - [ ] Fusuma widgets: label, button, toggle, slider, list with scrolling, dialog; rebuild the launcher and settings on them
 - [ ] Text stack in pure Rust (`parley` + `skrifa`, or `cosmic-text` + `swash`): shaping, fonts, wrapping
 - [ ] Text input with an input method (`winit` events) and accessibility (`AccessKit`) in the widgets
