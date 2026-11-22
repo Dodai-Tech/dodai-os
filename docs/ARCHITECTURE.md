@@ -56,6 +56,23 @@ Rule: a shared crate has no platform dependency. Each product supplies a thin ad
 Desktop-class hardware (GPU, Wi-Fi, USB, audio) is the long tail for the native kernel, so
 Dodai Linux covers desktops and laptops first.
 
+## The Dodai family
+
+Names follow a Japanese house: Dodai is the foundation, and each layer above has its own name, so
+each can be used without the others.
+
+| Part | Name | Notes |
+|---|---|---|
+| Design tokens and themes | `dodai-core` and its renamed siblings | in `dodai-ui` (being renamed) |
+| OS and microkernel | **Dodai OS** | this repo |
+| UI toolkit | **Fusuma** | OS-agnostic: layout, widgets, page slides. Planned. |
+| Renderer | **Tokonoma** | OS-agnostic: `tokonoma` (trait), `tokonoma-embedded`, `tokonoma-skia`, later `tokonoma-vello`. Own repo. |
+| Desktop environment | Dodai DE (or Minka) | Linux, Wayland. Planned. |
+| Linux distribution | Dodai Linux (or Machiya) | Arch-based. Planned. |
+
+Dependencies point one way: Dodai OS and Dodai DE use Fusuma, Fusuma uses Tokonoma, and Tokonoma
+knows nothing above it.
+
 ## Run modes
 
 One set of apps, shell, capabilities and HAL traits; only the layer under the HAL changes.
@@ -110,7 +127,7 @@ filtering are the same mechanism.
 * The kernel allocates nothing at run time: static tables, static stacks, sizes known at build.
 * Isolation uses the PMP (RISC-V) or MPU (Cortex-M) where it exists. Xtensa and the plain ESP32
   have none, so apps there are trusted, compiled-in code. This is stated, not hidden.
-* No microcode or GPU code: rendering is software (`embedded-graphics` today; Slint is an optional view because its GPL or commercial license does not fit an MIT-only dependency policy), with optional
+* No microcode or GPU code: rendering is software (through Tokonoma: `embedded-graphics` on microcontrollers, `tiny-skia` elsewhere; Slint stays an optional view because its GPL or commercial license does not fit an MIT-only dependency policy), with optional
   2D accelerators such as the P4 PPA behind the `Display` trait.
 * Radio code is Espressif's closed library. Networking is a driver service wrapping it.
 * Every parser and state machine is unit-tested and fuzzed (`fuzz/`), and `just check-all`

@@ -28,6 +28,17 @@ of the design are in [ARCHITECTURE.md](ARCHITECTURE.md). Status: `[x]` done, `[ 
 - [ ] Apps: weather (`weathertrack-core`), clock, settings (WiFi, brightness, time, about)
 - [ ] Settings: Bluetooth, OTA updates, sleep and wake, battery
 
+## Toolkit track: Tokonoma (renderer) and Fusuma (toolkit)
+- [x] Tokonoma repo: `Renderer` trait, `tokonoma-embedded` (integer, `no_std`), `tokonoma-skia` (anti-aliased), shared conformance suite, fuzzed
+- [ ] Publish Tokonoma 0.1 to crates.io, then depend on it from this repo
+- [ ] Port `dodai-os-shell` to draw through `Renderer`, so one view runs on the S3 and in a host window
+- [ ] Time-driven transitions in the shell: page slide, app open and close (`dodai-os-core::anim` exists)
+- [ ] Tokonoma: anti-aliased vector fonts for the `tiny-skia` backend, and glyph atlases for MCUs
+- [ ] Tokonoma: `tokonoma-vello`, GPU backend behind a feature, passing the same conformance suite
+- [ ] Fusuma repo: widget tree, `taffy` layout, event and focus routing, theme from the design tokens
+- [ ] Fusuma widgets: label, button, toggle, slider, list with scrolling, dialog; rebuild the launcher and settings on them
+- [ ] Platform adapters: `winit` + `softbuffer` for desktop, Android and iOS windows
+
 ## Phase 2: more boards
 - [ ] ESP32-P4 7" touch display (`riscv32imafc`, esp_hosted WiFi)
 - [ ] ESP32-C6, headless: console shell and background services
