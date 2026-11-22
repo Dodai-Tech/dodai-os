@@ -9,7 +9,7 @@ use core::fmt::Write;
 pub mod framebuf;
 pub use framebuf::FrameBuf;
 
-use dodai_os_core::{AppInfo, CapabilitySet, Gesture, Point as TouchPoint};
+use dodai_os_core::{AppInfo, CapabilitySet, Gesture, Point as TouchPoint, Tween, lerp};
 use dodai_os_shell_model::{Launcher, Output, Screen, Shell};
 use fusuma_render::{Align, Color, Point, Rect, Renderer, TextStyle};
 
@@ -69,9 +69,31 @@ impl Label {
     }
 }
 
+/// How long a slide takes, in milliseconds.
+pub const SLIDE_MS: u32 = 220;
+
+/// What moves during a transition.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum Motion<'a> {
+    /// The launcher changes page: the old one slides out, the new one in.
+    Page { from: usize, to: usize },
+    /// An app slides in over the launcher.
+    Open,
+    /// The app slides out to reveal the launcher.
+    Close(&'a AppInfo),
+}
+
+/// A transition in progress.
+#[derive(Clone, Copy, Debug)]
+struct Anim<'a> {
+    motion: Motion<'a>,
+    tween: Tween,
+}
+
 /// The whole shell on a screen of a given size.
 #[derive(Clone, Copy, Debug)]
 pub struct Ui<'a> {
+    anim: Option<Anim<'a>>,
     shell: Shell<'a>,
     size: (u16, u16),
     bar: u16,
@@ -97,6 +119,7 @@ impl<'a> Ui<'a> {
             cols,
             rows,
             theme: Theme::DARK,
+            anim: None,
         }
     }
 
@@ -112,27 +135,67 @@ impl<'a> Ui<'a> {
         (self.cols, self.rows)
     }
 
-    /// Handles a gesture in screen coordinates. A tap on the status bar goes back from an app.
-    pub fn on_gesture(&mut self, gesture: Gesture) -> Output<'a> {
-        match gesture {
-            Gesture::Tap(p) if p.y < i16::try_from(self.bar).unwrap_or(i16::MAX) => {
-                self.shell.back()
-            }
+    /// Handles a gesture in screen coordinates at time `now_ms` (monotonic milliseconds). A tap on
+    /// the status bar goes back from an app. A change of page or of app starts a slide.
+    pub fn on_gesture(&mut self, gesture: Gesture, now_ms: u32) -> Output<'a> {
+        let was_in = match self.shell.screen() {
+            Screen::App(app) => Some(app),
+            Screen::Launcher => None,
+        };
+        let page = self.shell.launcher().page();
+        let bar = i16::try_from(self.bar).unwrap_or(i16::MAX);
+        let out = match gesture {
+            Gesture::Tap(p) if p.y < bar => self.shell.back(),
             Gesture::Tap(p) => {
-                let y =
-                    p.y.saturating_sub(i16::try_from(self.bar).unwrap_or(i16::MAX));
+                let y = p.y.saturating_sub(bar);
                 self.shell
                     .on_gesture(Gesture::Tap(TouchPoint { x: p.x, y }))
             }
             other => self.shell.on_gesture(other),
+        };
+        let tween = Tween::new(now_ms, SLIDE_MS);
+        let motion = match (out, was_in) {
+            (Output::Launch(_), _) => Some(Motion::Open),
+            (Output::Redraw, Some(app)) => Some(Motion::Close(app)),
+            (Output::Redraw, None) => {
+                let to = self.shell.launcher().page();
+                (to != page).then_some(Motion::Page { from: page, to })
+            }
+            _ => None,
+        };
+        if let Some(motion) = motion {
+            self.anim = Some(Anim { motion, tween });
         }
+        out
     }
 
-    /// Paints the current screen.
+    /// Whether a transition is running (or has one last frame to show).
+    #[must_use]
+    pub const fn is_animating(&self) -> bool {
+        self.anim.is_some()
+    }
+
+    /// Advances time. Returns true while a frame must be drawn: during a slide, and once more after
+    /// it ends so the final picture is the settled one.
+    pub fn tick(&mut self, now_ms: u32) -> bool {
+        let Some(anim) = self.anim else { return false };
+        if anim.tween.is_done(now_ms) {
+            self.anim = None;
+        }
+        true
+    }
+
+    /// Eased progress of the running transition in permille (1000 when there is none).
+    fn progress(&self, now_ms: u32) -> u16 {
+        self.anim
+            .map_or(dodai_os_core::anim::FULL, |a| a.tween.eased(now_ms))
+    }
+
+    /// Paints the screen as it looks at `now_ms`: settled, or part-way through a slide.
     ///
     /// # Errors
     /// Returns the renderer's error when drawing fails.
-    pub fn draw<R: Renderer>(&self, r: &mut R) -> Result<(), R::Error> {
+    pub fn draw<R: Renderer>(&self, r: &mut R, now_ms: u32) -> Result<(), R::Error> {
         let t = self.theme;
         r.clear(t.background)?;
         let text = TextStyle::new(TEXT as u32, t.text);
@@ -151,21 +214,100 @@ impl<'a> Ui<'a> {
         };
         r.draw_text(title.as_str(), Point::new(MARGIN, (bar - TEXT) / 2), &text)?;
 
-        match self.shell.screen() {
-            Screen::App(app) => r.draw_text(
-                app.name,
-                Point::new(w / 2, h / 2 - BASELINE),
-                &text.aligned(Align::Center),
-            ),
-            Screen::Launcher => self.draw_grid(r, &text, (w, h - bar)),
+        let grid = (w, h - bar);
+        let (p, page) = (self.progress(now_ms), self.shell.launcher().page());
+        match (self.shell.screen(), self.anim.map(|a| a.motion)) {
+            (Screen::Launcher, Some(Motion::Page { from, to })) => {
+                let (dir, shift) = (if to > from { 1 } else { -1 }, lerp(0, w, p));
+                self.in_layer(r, -dir * shift, |r| self.draw_page(r, &text, grid, from))?;
+                self.in_layer(r, dir * (w - shift), |r| self.draw_page(r, &text, grid, to))?;
+            }
+            (Screen::Launcher, Some(Motion::Close(app))) => {
+                self.in_layer(r, 0, |r| self.draw_page(r, &text, grid, page))?;
+                self.in_layer(r, lerp(0, w, p), |r| self.draw_app(r, &text, app, (w, h)))?;
+            }
+            (Screen::App(app), Some(Motion::Open)) => {
+                self.in_layer(r, 0, |r| self.draw_page(r, &text, grid, page))?;
+                self.in_layer(r, lerp(w, 0, p), |r| self.draw_app(r, &text, app, (w, h)))?;
+            }
+            (Screen::Launcher, _) => self.draw_page(r, &text, grid, page)?,
+            (Screen::App(app), _) => self.draw_app(r, &text, app, (w, h))?,
         }
+        if matches!(self.shell.screen(), Screen::Launcher) {
+            self.draw_counter(r, &text)?;
+        }
+        Ok(())
     }
 
-    fn draw_grid<R: Renderer>(
+    /// Runs `draw` limited to the area below the status bar and moved `dx` pixels sideways.
+    fn in_layer<R: Renderer>(
+        &self,
+        r: &mut R,
+        dx: i32,
+        draw: impl FnOnce(&mut R) -> Result<(), R::Error>,
+    ) -> Result<(), R::Error> {
+        r.save()?;
+        let below = Rect::new(
+            0,
+            i32::from(self.bar),
+            u32::from(self.size.0),
+            u32::from(self.size.1.saturating_sub(self.bar)),
+        );
+        let result = r
+            .clip(below)
+            .and_then(|()| r.translate(dx, 0))
+            .and_then(|()| draw(r));
+        r.restore()?;
+        result
+    }
+
+    /// The page of an app: its name, centered, on the background.
+    fn draw_app<R: Renderer>(
+        &self,
+        r: &mut R,
+        text: &TextStyle,
+        app: &AppInfo,
+        (w, h): (i32, i32),
+    ) -> Result<(), R::Error> {
+        let bar = i32::from(self.bar);
+        r.fill_rect(
+            Rect::new(0, bar, w.max(0) as u32, (h - bar).max(0) as u32),
+            0,
+            self.theme.background,
+        )?;
+        r.draw_text(
+            app.name,
+            Point::new(w / 2, h / 2 - BASELINE),
+            &text.aligned(Align::Center),
+        )
+    }
+
+    /// The "page / pages" counter in the status bar.
+    fn draw_counter<R: Renderer>(&self, r: &mut R, text: &TextStyle) -> Result<(), R::Error> {
+        let launcher = self.shell.launcher();
+        let pages = launcher.page_count();
+        if pages > 1 {
+            let mut label = Label::default();
+            let _ = write!(label, "{}/{}", launcher.page() + 1, pages);
+            r.draw_text(
+                label.as_str(),
+                Point::new(
+                    i32::from(self.size.0) - MARGIN,
+                    i32::from(self.bar) / 2 + 5 - BASELINE,
+                ),
+                &text.aligned(Align::Right),
+            )?;
+        }
+        Ok(())
+    }
+
+    /// One page of the app grid (the background is cleared by the caller).
+    fn draw_page<R: Renderer>(
         &self,
         r: &mut R,
         text: &TextStyle,
         (w, h): (i32, i32),
+        page: usize,
     ) -> Result<(), R::Error> {
         let t = self.theme;
         let centered = text.aligned(Align::Center);
@@ -173,7 +315,7 @@ impl<'a> Ui<'a> {
         let (cols, rows) = (i32::from(self.cols), i32::from(self.rows));
         let top = i32::from(self.bar);
 
-        for (i, app) in launcher.page_apps().enumerate() {
+        for (i, app) in launcher.apps_on(page).enumerate() {
             let i = i as i32;
             let (col, row) = (i % cols, i / cols);
             let (x0, y0) = (col * w / cols, top + row * h / rows);
@@ -197,19 +339,6 @@ impl<'a> Ui<'a> {
             r.draw_text(app.name, Point::new(cx, cy + 34 - BASELINE), &centered)?;
         }
 
-        let pages = launcher.page_count();
-        if pages > 1 {
-            let mut label = Label::default();
-            let _ = write!(label, "{}/{}", launcher.page() + 1, pages);
-            r.draw_text(
-                label.as_str(),
-                Point::new(
-                    i32::from(self.size.0) - MARGIN,
-                    i32::from(self.bar) / 2 + 5 - BASELINE,
-                ),
-                &text.aligned(Align::Right),
-            )?;
-        }
         Ok(())
     }
 }
@@ -219,7 +348,7 @@ mod tests {
     use super::*;
     use dodai_os_core::{
         Capability::{Display, Touch},
-        Direction,
+        Direction, ease_out_cubic, lerp,
     };
     use fusuma_render::Probe;
     use fusuma_render_embedded::{Embedded, Frame};
@@ -276,7 +405,7 @@ mod tests {
     #[test]
     fn draws_bar_cards_and_background() {
         let mut s = screen(410, 502);
-        ui().draw(&mut s).unwrap();
+        ui().draw(&mut s, 10_000).unwrap();
         let t = Theme::DARK;
         assert_eq!(at(&s, 300, 20), on_panel(t.surface), "status bar");
         assert_eq!(
@@ -297,28 +426,28 @@ mod tests {
     fn tap_below_the_bar_launches_the_app_under_the_finger_and_bar_goes_back() {
         let mut u = ui();
         // Second column, first row: grid starts below the 36 px bar.
-        let out = u.on_gesture(tap(300, 36 + 20));
+        let out = u.on_gesture(tap(300, 36 + 20), 0);
         assert!(matches!(out, Output::Launch(a) if a.name == "Clock"));
         assert!(matches!(u.shell().screen(), Screen::App(a) if a.name == "Clock"));
         let mut s = screen(410, 502);
-        u.draw(&mut s).unwrap();
+        u.draw(&mut s, 10_000).unwrap();
         let white = on_panel(Theme::DARK.text);
         let text = (180..230).any(|x| (230..255).any(|y| at(&s, x, y) == white));
         assert!(text, "app page shows the app name");
-        assert_eq!(u.on_gesture(tap(10, 10)), Output::Redraw);
+        assert_eq!(u.on_gesture(tap(10, 10), 0), Output::Redraw);
         assert!(matches!(u.shell().screen(), Screen::Launcher));
     }
 
     #[test]
     fn tap_on_the_bar_in_the_launcher_does_nothing_and_swipes_page() {
         let mut u = ui();
-        assert_eq!(u.on_gesture(tap(10, 10)), Output::None);
+        assert_eq!(u.on_gesture(tap(10, 10), 0), Output::None);
         assert_eq!(
-            u.on_gesture(Gesture::Swipe(Direction::Left)),
+            u.on_gesture(Gesture::Swipe(Direction::Left), 0),
             Output::Redraw
         );
         let mut s = screen(410, 502);
-        u.draw(&mut s).unwrap();
+        u.draw(&mut s, 10_000).unwrap();
         let white = on_panel(Theme::DARK.text);
         let counter = (340..410).any(|x| (8..30).any(|y| at(&s, x, y) == white));
         assert!(counter, "the page counter is in the top bar, not clipped");
@@ -330,7 +459,7 @@ mod tests {
         for size in [(1, 1), (30, 30), (466, 466), (2000, 2000)] {
             let u = Ui::new(BOARD, &LONG, size);
             let mut s = screen(size.0, size.1);
-            u.draw(&mut s).unwrap();
+            u.draw(&mut s, 10_000).unwrap();
         }
     }
 
@@ -346,9 +475,9 @@ mod tests {
     fn the_embedded_and_the_anti_aliased_backends_draw_the_same_layout() {
         let u = ui();
         let mut a = screen(410, 502);
-        u.draw(&mut a).unwrap();
+        u.draw(&mut a, 10_000).unwrap();
         let mut b = fusuma_render_skia::Skia::new(410, 502).unwrap();
-        u.draw(&mut b).unwrap();
+        u.draw(&mut b, 10_000).unwrap();
         // Compare the flat areas; rounded corners and discs differ at their edges only.
         let near = |p: Color, q: Color| {
             p.r.abs_diff(q.r) <= 10 && p.g.abs_diff(q.g) <= 10 && p.b.abs_diff(q.b) <= 10
@@ -365,5 +494,192 @@ mod tests {
             differing < 410 * 502 / 25,
             "{differing} pixels differ between the backends"
         );
+    }
+
+    /// The rows below the status bar, which is where a slide happens.
+    fn below_bar(s: &Panel) -> Vec<u16> {
+        s.target().pixels()[36 * 410..].to_vec()
+    }
+
+    fn render(u: &Ui<'_>, now: u32) -> Panel {
+        let mut s = screen(410, 502);
+        u.draw(&mut s, now).unwrap();
+        s
+    }
+
+    /// The settled picture of a shell that has run `gestures` and then waited.
+    fn settled(gestures: &[Gesture]) -> Vec<u16> {
+        let mut u = ui();
+        for g in gestures {
+            u.on_gesture(*g, 0);
+        }
+        u.tick(10_000);
+        below_bar(&render(&u, 10_000))
+    }
+
+    const SWIPE_LEFT: Gesture = Gesture::Swipe(Direction::Left);
+    const SWIPE_RIGHT: Gesture = Gesture::Swipe(Direction::Right);
+
+    #[test]
+    fn a_page_swipe_slides_from_the_old_page_to_the_new_one() {
+        let (page0, page1) = (settled(&[]), settled(&[SWIPE_LEFT]));
+        assert_ne!(page0, page1);
+        let mut u = ui();
+        assert_eq!(u.on_gesture(SWIPE_LEFT, 1000), Output::Redraw);
+        assert!(u.is_animating());
+        assert_eq!(
+            below_bar(&render(&u, 1000)),
+            page0,
+            "the first frame is still the old page"
+        );
+        let mid = below_bar(&render(&u, 1000 + SLIDE_MS / 4));
+        assert!(mid != page0 && mid != page1, "a frame in between is a mix");
+        assert_eq!(
+            below_bar(&render(&u, 1000 + SLIDE_MS)),
+            page1,
+            "the last frame is the new page"
+        );
+    }
+
+    #[test]
+    fn a_slide_moves_the_pages_sideways_in_the_right_direction() {
+        let old = render(&ui(), 10_000);
+        let mut next = ui();
+        next.on_gesture(SWIPE_LEFT, 0);
+        next.tick(10_000);
+        let new = render(&next, 10_000);
+
+        let mut u = ui();
+        u.on_gesture(SWIPE_LEFT, 0);
+        let now = SLIDE_MS / 4;
+        let mid = render(&u, now);
+        let shift = lerp(0, 410, ease_out_cubic(250));
+        assert!(
+            (100..300).contains(&shift),
+            "the test needs a real mid-slide frame: {shift}"
+        );
+        for y in 36..502 {
+            for x in 0..410 {
+                let want = if x < 410 - shift {
+                    // The old page has moved left by `shift`: what is at x was at x + shift.
+                    at(&old, x + shift, y)
+                } else {
+                    // The new page comes from the right: what is at x is at x - (410 - shift).
+                    at(&new, x - (410 - shift), y)
+                };
+                assert_eq!(
+                    at(&mid, x, y),
+                    want,
+                    "pixel ({x}, {y}) with a shift of {shift}"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn tick_runs_the_transition_to_its_end_and_then_stops() {
+        let mut u = ui();
+        assert!(!u.tick(0), "nothing runs at first");
+        u.on_gesture(SWIPE_LEFT, 100);
+        assert!(u.tick(100 + SLIDE_MS / 2), "mid slide: draw a frame");
+        assert!(u.is_animating());
+        assert!(u.tick(100 + SLIDE_MS), "the final frame is drawn once");
+        assert!(!u.is_animating());
+        assert!(!u.tick(100 + SLIDE_MS + 10), "then nothing more to draw");
+    }
+
+    #[test]
+    fn gestures_that_change_nothing_start_no_animation() {
+        let mut u = ui();
+        assert_eq!(
+            u.on_gesture(SWIPE_RIGHT, 0),
+            Output::None,
+            "no page before the first"
+        );
+        assert_eq!(
+            u.on_gesture(tap(10, 10), 0),
+            Output::None,
+            "the bar does nothing in the launcher"
+        );
+        assert_eq!(
+            u.on_gesture(Gesture::LongPress(TouchPoint { x: 5, y: 80 }), 0),
+            Output::None
+        );
+        assert!(!u.is_animating());
+    }
+
+    #[test]
+    fn opening_and_closing_an_app_slide_it_in_and_out() {
+        let (launcher, app) = (settled(&[]), settled(&[tap(300, 56)]));
+        let mut u = ui();
+        u.on_gesture(tap(300, 56), 0);
+        assert_eq!(
+            below_bar(&render(&u, 0)),
+            launcher,
+            "opens from the right edge"
+        );
+        let mid = below_bar(&render(&u, SLIDE_MS / 4));
+        assert!(mid != launcher && mid != app);
+        assert_eq!(below_bar(&render(&u, SLIDE_MS)), app);
+        u.tick(SLIDE_MS);
+        u.on_gesture(tap(10, 10), 1000);
+        assert_eq!(
+            below_bar(&render(&u, 1000)),
+            app,
+            "closing starts from the app page"
+        );
+        assert_eq!(below_bar(&render(&u, 1000 + SLIDE_MS)), launcher);
+        u.tick(1000 + SLIDE_MS);
+        assert!(!u.is_animating());
+    }
+
+    #[test]
+    fn a_swipe_during_a_slide_restarts_it_and_settles_on_the_right_page() {
+        let mut u = ui();
+        u.on_gesture(SWIPE_LEFT, 0);
+        u.on_gesture(SWIPE_RIGHT, SLIDE_MS / 3);
+        assert_eq!(u.shell().launcher().page(), 0);
+        u.tick(SLIDE_MS / 3 + SLIDE_MS);
+        assert!(!u.is_animating());
+        assert_eq!(below_bar(&render(&u, 5000)), settled(&[]));
+    }
+
+    #[test]
+    fn the_clock_wrapping_or_running_backwards_cannot_break_a_frame() {
+        let mut u = ui();
+        u.on_gesture(SWIPE_LEFT, u32::MAX - 50);
+        for now in [u32::MAX - 50, u32::MAX, 0, 100, SLIDE_MS, 5, u32::MAX / 2] {
+            render(&u, now);
+        }
+    }
+
+    #[test]
+    fn a_slide_on_any_screen_size_does_not_panic() {
+        for size in [(1, 1), (30, 30), (466, 466), (2000, 2000)] {
+            let mut u = Ui::new(BOARD, &APPS, size);
+            let mut s = screen(size.0, size.1);
+            u.on_gesture(SWIPE_LEFT, 0);
+            u.draw(&mut s, SLIDE_MS / 2).unwrap();
+            u.on_gesture(tap(size.0 as i16 / 2, size.1 as i16 / 2), 5);
+            u.draw(&mut s, SLIDE_MS / 2).unwrap();
+        }
+    }
+
+    #[test]
+    fn the_slide_looks_the_same_on_the_anti_aliased_backend() {
+        let mut u = ui();
+        u.on_gesture(SWIPE_LEFT, 0);
+        let mut a = screen(410, 502);
+        u.draw(&mut a, SLIDE_MS / 4).unwrap();
+        let mut b = fusuma_render_skia::Skia::new(410, 502).unwrap();
+        u.draw(&mut b, SLIDE_MS / 4).unwrap();
+        let near = |p: Color, q: Color| {
+            p.r.abs_diff(q.r) <= 10 && p.g.abs_diff(q.g) <= 10 && p.b.abs_diff(q.b) <= 10
+        };
+        let differing = (0..502)
+            .flat_map(|y| (0..410).map(move |x| (x, y)))
+            .filter(|&(x, y)| !near(a.pixel(x, y).unwrap(), b.pixel(x, y).unwrap()))
+            .count();
+        assert!(differing < 410 * 502 / 25, "{differing} pixels differ");
     }
 }

@@ -122,7 +122,7 @@ fn main() -> ! {
 
     let mut ui = Ui::new(board::CAPABILITIES, &APPS, (w, h));
     let mut gestures = GestureRecognizer::default();
-    let _ = ui.draw(&mut canvas);
+    let _ = ui.draw(&mut canvas, BootClock.now_ms());
     flush(&mut display, canvas.target_mut());
     log::info!("shell drawn; waiting for touch");
 
@@ -137,17 +137,22 @@ fn main() -> ! {
         if let Ok(Some(event)) = touch.poll() {
             if let Some(gesture) = gestures.feed(event) {
                 log::info!("gesture {gesture:?}");
-                redraw |= ui.on_gesture(gesture) != dodai_os_shell_model::Output::None;
+                redraw |= ui.on_gesture(gesture, now) != dodai_os_shell_model::Output::None;
             }
         }
-        if let Some(gesture) = gestures.tick(BootClock.now_ms()) {
-            redraw |= ui.on_gesture(gesture) != dodai_os_shell_model::Output::None;
+        if let Some(gesture) = gestures.tick(now) {
+            redraw |= ui.on_gesture(gesture, now) != dodai_os_shell_model::Output::None;
         }
+        // A slide needs a new frame every time round; the last one settles the picture.
+        redraw |= ui.tick(now);
         if redraw {
-            let _ = ui.draw(&mut canvas);
+            let _ = ui.draw(&mut canvas, now);
             flush(&mut display, canvas.target_mut());
         }
-        delay.delay_millis(10);
+        // Idle polling can wait; while sliding, draw as fast as the panel takes frames.
+        if !ui.is_animating() {
+            delay.delay_millis(10);
+        }
     }
 }
 

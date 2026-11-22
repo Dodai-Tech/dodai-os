@@ -32,7 +32,8 @@ of the design are in [ARCHITECTURE.md](ARCHITECTURE.md). Status: `[x]` done, `[ 
 - [x] Fusuma repo (`~/Projects/fusuma`), with the renderer as separate `fusuma-render*` crates: `Renderer` trait, `fusuma-render-embedded` (integer, `no_std`), `fusuma-render-skia` (anti-aliased), shared conformance suite, fuzzed
 - [ ] Publish `fusuma-render` 0.1 to crates.io, then replace the path dependencies on `../fusuma` here (CI cannot build this repo until then)
 - [x] `dodai-os-shell` draws through `fusuma-render`'s `Renderer`: the S3 uses the integer backend, the host can use the anti-aliased one (`--renderer skia`)
-- [ ] Time-driven transitions in the shell: page slide, app open and close (`dodai-os-core::anim` exists)
+- [x] Time-driven transitions in the shell: page slide, app open and close (`Ui::on_gesture(g, now)`, `Ui::tick`, 220 ms ease-out); the host takes pictures at a chosen time with `--at MS`
+- [ ] Measure the frame rate of a slide on the S3 (a slide redraws the whole screen each frame) and use partial updates if it is too low
 - [ ] `fusuma-render-skia`: anti-aliased vector fonts for the `tiny-skia` backend, and glyph atlases for MCUs
 - [ ] `fusuma-render-vello`, GPU backend behind a feature, passing the same conformance suite
 - [ ] `fusuma-*` crates in the same repo: widget tree, `taffy` layout, event and focus routing, theme from the design tokens

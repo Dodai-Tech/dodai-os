@@ -2,7 +2,7 @@
 //!
 //! ```text
 //! dodai-os-host --list
-//! dodai-os-host --device watch-round --png out.png [--tap X,Y]... [--renderer embedded|skia]
+//! dodai-os-host --device watch-round --png out.png [--tap X,Y]... [--renderer embedded|skia] [--at MS]
 //! dodai-os-host --device p4-7in --window        (needs --features window)
 //! ```
 
@@ -25,6 +25,8 @@ struct Options {
     list: bool,
     device: Option<String>,
     renderer: Backend,
+    /// Milliseconds after the last tap at which the picture is taken (default: settled).
+    at: Option<u32>,
     png: Option<String>,
     window: bool,
     taps: Vec<(i16, i16)>,
@@ -52,6 +54,13 @@ fn parse(args: impl IntoIterator<Item = String>) -> Result<Options, String> {
             "--window" => o.window = true,
             "--device" => o.device = Some(value("--device")?),
             "--png" => o.png = Some(value("--png")?),
+            "--at" => {
+                let v = value("--at")?;
+                o.at = Some(
+                    v.parse()
+                        .map_err(|_| format!("bad --at '{v}', want milliseconds"))?,
+                );
+            }
             "--renderer" => {
                 o.renderer = match value("--renderer")?.as_str() {
                     "embedded" => Backend::Embedded,
@@ -79,7 +88,10 @@ fn run(o: &Options) -> Result<(), String> {
     let mut session = Session::new(profile).ok_or_else(|| format!("'{name}' has no screen"))?;
     for &(x, y) in &o.taps {
         session.tap(x, y);
+        session.advance(60);
     }
+    // Let the last slide run to the requested time; 1000 ms is long past any transition.
+    session.advance(o.at.unwrap_or(1000));
     if let Some(path) = &o.png {
         let bytes = match o.renderer {
             Backend::Embedded => png_bytes(session.display()).map_err(|e| e.to_string())?,
@@ -157,6 +169,33 @@ mod tests {
             run(&parse(args(&cmd)).unwrap()).unwrap();
             assert!(std::fs::metadata(&path).unwrap().len() > 100, "{backend}");
         }
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn at_takes_milliseconds() {
+        assert_eq!(parse(args("--at 120")).unwrap().at, Some(120));
+        assert_eq!(parse(args("--png a.png")).unwrap().at, None);
+        assert!(parse(args("--at soon")).is_err());
+        assert!(parse(args("--at -5")).is_err());
+        assert!(parse(args("--at")).is_err());
+    }
+
+    #[test]
+    fn a_picture_taken_mid_slide_differs_from_the_settled_one() {
+        let dir = std::env::temp_dir().join(format!("dodai-at-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let shot = |at: &str| {
+            let path = dir.join(format!("at-{at}.png"));
+            let cmd = format!(
+                "--device s3-amoled-2.06 --tap 300,56 --at {at} --png {}",
+                path.display()
+            );
+            run(&parse(args(&cmd)).unwrap()).unwrap();
+            std::fs::read(path).unwrap()
+        };
+        let (start, mid, end) = (shot("0"), shot("60"), shot("1000"));
+        assert!(start != mid && mid != end && start != end);
         std::fs::remove_dir_all(&dir).unwrap();
     }
 

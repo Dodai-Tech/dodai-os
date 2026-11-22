@@ -258,6 +258,8 @@ pub struct Session {
     renderer: Embedded<HostDisplay>,
     ui: Ui<'static>,
     gestures: GestureRecognizer,
+    /// The latest time the session has seen, in milliseconds; transitions are drawn at it.
+    now_ms: u32,
 }
 
 impl Session {
@@ -276,6 +278,7 @@ impl Session {
                 (profile.width, profile.height),
             ),
             gestures: GestureRecognizer::default(),
+            now_ms: 0,
         };
         session.render();
         Some(session)
@@ -303,7 +306,7 @@ impl Session {
     pub fn render(&mut self) {
         // Drawing into memory cannot fail; the only errors a renderer has are about its state stack,
         // which the shell does not use.
-        let _ = self.ui.draw(&mut self.renderer);
+        let _ = self.ui.draw(&mut self.renderer, self.now_ms);
     }
 
     /// Paints the current screen with any other backend, for example the anti-aliased one.
@@ -311,12 +314,12 @@ impl Session {
     /// # Errors
     /// The renderer's error.
     pub fn draw_with<R: Renderer>(&self, renderer: &mut R) -> Result<(), R::Error> {
-        self.ui.draw(renderer)
+        self.ui.draw(renderer, self.now_ms)
     }
 
     fn apply(&mut self, gesture: Option<Gesture>) -> bool {
         let Some(gesture) = gesture else { return false };
-        let changed = self.ui.on_gesture(gesture) != Output::None;
+        let changed = self.ui.on_gesture(gesture, self.now_ms) != Output::None;
         if changed {
             self.render();
         }
@@ -325,28 +328,42 @@ impl Session {
 
     /// Feeds one touch sample (a mouse press, move or release); true when the screen changed.
     pub fn touch(&mut self, event: TouchEvent) -> bool {
+        self.now_ms = event.t_ms;
         let gesture = self.gestures.feed(event);
         self.apply(gesture)
     }
 
-    /// Lets time pass so a held touch becomes a long press; true when the screen changed.
+    /// Lets time pass: a held touch becomes a long press and a running slide advances. True when
+    /// the screen changed.
     pub fn tick(&mut self, now_ms: u32) -> bool {
+        self.now_ms = now_ms;
         let gesture = self.gestures.tick(now_ms);
-        self.apply(gesture)
+        let mut changed = self.apply(gesture);
+        if self.ui.tick(now_ms) {
+            self.render();
+            changed = true;
+        }
+        changed
     }
 
-    /// A quick tap at `(x, y)`, as a test or a screenshot script would do.
+    /// Moves the clock on by `ms` and runs [`tick`](Self::tick), as a window does each frame.
+    pub fn advance(&mut self, ms: u32) -> bool {
+        self.tick(self.now_ms.wrapping_add(ms))
+    }
+
+    /// A quick tap at `(x, y)` at the current time, as a test or a screenshot script would do.
     pub fn tap(&mut self, x: i16, y: i16) -> bool {
         let point = Point { x, y };
+        let t = self.now_ms;
         self.touch(TouchEvent {
             phase: Phase::Down,
             point,
-            t_ms: 0,
+            t_ms: t,
         });
         self.touch(TouchEvent {
             phase: Phase::Up,
             point,
-            t_ms: 50,
+            t_ms: t.wrapping_add(50),
         })
     }
 }
@@ -398,6 +415,7 @@ pub fn png_skia(session: &Session) -> Result<Vec<u8>, String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use dodai_os_shell::SLIDE_MS;
 
     #[test]
     fn profiles_have_unique_names_and_sane_sizes() {
@@ -455,18 +473,54 @@ mod tests {
         );
     }
 
+    /// The rows below the 36 px status bar of a 410 px wide display, where slides happen.
+    fn below_bar(s: &Session) -> Vec<u16> {
+        s.display().pixels()[36 * 410..].to_vec()
+    }
+
     #[test]
     fn session_launches_an_app_from_a_tap_and_goes_back() {
         let mut s = Session::new(DeviceProfile::by_name("s3-amoled-2.06").unwrap()).unwrap();
-        let before = s.display().pixels().to_vec();
+        let launcher = below_bar(&s);
         assert!(s.tap(300, 36 + 20), "second card: Clock");
         assert!(
             matches!(s.ui().shell().screen(), dodai_os_shell_model::Screen::App(a) if a.name == "Clock")
         );
-        assert_ne!(s.display().pixels(), before.as_slice());
+        assert!(
+            below_bar(&s) == launcher,
+            "the app has not slid in yet, the launcher is still there"
+        );
+        s.advance(SLIDE_MS / 2);
+        let mid = below_bar(&s);
+        assert!(mid != launcher, "the app is part-way in");
+        s.advance(SLIDE_MS);
+        let open = below_bar(&s);
+        assert!(open != launcher && open != mid, "the app has settled");
         assert!(s.tap(10, 10), "status bar goes back");
-        assert_eq!(s.display().pixels(), before.as_slice());
+        s.advance(SLIDE_MS * 2);
+        assert!(below_bar(&s) == launcher, "back on the launcher");
         assert!(!s.tap(10, 10), "nothing to go back from");
+    }
+
+    #[test]
+    fn a_session_draws_slides_at_its_own_clock_and_settles() {
+        let mut s = Session::new(DeviceProfile::by_name("s3-amoled-2.06").unwrap()).unwrap();
+        assert!(!s.advance(1000), "nothing is running");
+        s.touch(TouchEvent {
+            phase: Phase::Down,
+            point: Point { x: 380, y: 200 },
+            t_ms: 5000,
+        });
+        s.touch(TouchEvent {
+            phase: Phase::Up,
+            point: Point { x: 30, y: 200 },
+            t_ms: 5080,
+        });
+        assert!(s.ui().is_animating(), "a swipe started a slide");
+        assert!(s.advance(SLIDE_MS / 3), "a frame is drawn while it runs");
+        assert!(s.advance(SLIDE_MS), "and the settled one at the end");
+        assert!(!s.ui().is_animating());
+        assert!(!s.advance(10), "then nothing more");
     }
 
     #[test]
