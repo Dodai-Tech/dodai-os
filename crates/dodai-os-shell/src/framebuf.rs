@@ -177,7 +177,7 @@ mod tests {
         assert_eq!(fb.pixels().iter().filter(|&&p| p == green).count(), 3 * 3);
         assert_eq!(fb.pixels()[2 * 4], green);
         assert_eq!(fb.pixels()[2 * 4 + 3], 0, "outside the area on that row");
-        assert_eq!(fb.pixels()[1 * 4], 0, "rows above are untouched");
+        assert_eq!(fb.pixels()[4], 0, "rows above are untouched");
         let (first, rows) = fb.take_dirty().unwrap();
         assert_eq!((first, rows.len()), (2, 3 * 4));
         let off = Rectangle::new(Point::new(10, 10), Size::new(2, 2));
