@@ -8,6 +8,11 @@ A small, portable app platform and launcher for ESP-Rust boards
 
 ESP32 firmware in Rust (esp-idf, std) with a host-testable core.
 
+## Docs
+
+* [Architecture](docs/ARCHITECTURE.md)
+* [Roadmap](docs/ROADMAP.md)
+
 ## Layout
 
 | Crate | Chip | Rust target | Flash |

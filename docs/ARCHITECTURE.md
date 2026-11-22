@@ -35,6 +35,34 @@ hardware only through capabilities the shell grants.
 Design tokens and themes come from `dodai-core` (the `dodai-ui` repo); the OS never reuses
 that name.
 
+## Run modes
+
+One set of apps, shell, capabilities and HAL traits; only the layer under the HAL changes.
+
+| Mode | What it is | Targets |
+|---|---|---|
+| **Standalone, own kernel** | Dodai is the OS and boots on the hardware | MCUs (ESP32, RP, nRF, STM32), QEMU, Raspberry Pi, x86 PCs, open or unlockable phones and wearables |
+| **On Linux** | Dodai is the userspace shell on a minimal Linux kernel; Linux supplies drivers, GPU and radio | devices with mainline or vendor Linux, including unlocked phones |
+| **Hosted** | Dodai is an app inside another OS (`dodai-os-host`, a window plus host input and clock) | Linux, macOS, Windows, Android, iOS; also the development preview |
+
+## Device feasibility (standalone)
+
+The bootloader is rarely the problem: many Android phones unlock and boot a custom image. The
+blocker is undocumented hardware: closed GPU, modem, Wi-Fi/BT firmware, camera and audio DSPs.
+
+| Device class | Own kernel | On Linux |
+|---|---|---|
+| MCUs, wearables and panels with Rust HALs | yes, first | n/a |
+| Raspberry Pi and ARM SBCs | yes | yes |
+| x86 PC (UEFI framebuffer, VirtIO, ACPI, PCI, USB) | yes, hard | yes |
+| Unlocked phones with good mainline Linux support | display, touch and storage first; radio is the hard part | realistic |
+| Unlocked phones with poor mainline support | mostly no | vendor kernel |
+| iPhone, Apple Watch, locked phones | no | no |
+
+The first phone target is the best-supported unlocked device the project owner has (check the
+postmarketOS device tiers). QEMU (`virt` for RISC-V and ARM, `q35` for x86) is the CI target for
+every port.
+
 ## Capabilities
 
 A board declares a `CapabilitySet` (`Display`, `Touch`, `Wifi`, `Ble`, `Battery`, ...). An app
@@ -52,6 +80,7 @@ filtering are the same mechanism.
 3. **Native backend.** `esp-hal` (`no_std`) plus `esp-wifi` for the radio, the Dodai kernel
    and the first port (RISC-V). Same apps, no change.
 4. **More ports.** Xtensa, Cortex-M, then x86 (QEMU, framebuffer UI).
+5. **Hosted and Linux modes**, then phones: see `ROADMAP.md`.
 
 ## Rules
 
