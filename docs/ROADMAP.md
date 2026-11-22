@@ -9,7 +9,7 @@ of the design are in [ARCHITECTURE.md](ARCHITECTURE.md). Status: `[x]` done, `[ 
 - [x] `dodai-os-hal` (`no_std`): display, touch, backlight, clock, board traits
 - [x] Architecture document, backup of the S3 board's native firmware
 - [x] `dodai-os-kernel` (`no_std`, no `unsafe`): static cooperative scheduler, message queues, capability table with delegation, fuzzed
-- [x] `dodai-os-shell-model` (`no_std`): launcher paging, hit testing, navigation, shared with Dodai DE
+- [x] `dodai-os-shell-model` (`no_std`): launcher paging, hit testing, navigation, shared with Kawara
 - [x] `dodai-os-host`: device profiles (S3 AMOLED, round watch, P4 7in, headless, desktop), host clock and framebuffer display
 
 ## Phase 1: first device, hosted preview (ESP32-S3 AMOLED 2.06)
