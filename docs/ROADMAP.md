@@ -30,8 +30,8 @@ of the design are in [ARCHITECTURE.md](ARCHITECTURE.md). Status: `[x]` done, `[ 
 
 ## Toolkit track: Tokonoma (renderer) and Fusuma (toolkit)
 - [x] Fusuma repo (`~/Projects/fusuma`), with Tokonoma inside as separate crates: `Renderer` trait, `tokonoma-embedded` (integer, `no_std`), `tokonoma-skia` (anti-aliased), shared conformance suite, fuzzed
-- [ ] Publish Tokonoma 0.1 to crates.io, then depend on it from this repo
-- [ ] Port `dodai-os-shell` to draw through `Renderer`, so one view runs on the S3 and in a host window
+- [ ] Publish Tokonoma 0.1 to crates.io, then replace the path dependencies on `../fusuma` here (CI cannot build this repo until then)
+- [x] `dodai-os-shell` draws through Tokonoma's `Renderer`: the S3 uses the integer backend, the host can use the anti-aliased one (`--renderer skia`)
 - [ ] Time-driven transitions in the shell: page slide, app open and close (`dodai-os-core::anim` exists)
 - [ ] Tokonoma: anti-aliased vector fonts for the `tiny-skia` backend, and glyph atlases for MCUs
 - [ ] Tokonoma: `tokonoma-vello`, GPU backend behind a feature, passing the same conformance suite

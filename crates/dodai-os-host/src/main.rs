@@ -2,18 +2,29 @@
 //!
 //! ```text
 //! dodai-os-host --list
-//! dodai-os-host --device watch-round --png out.png [--tap X,Y]...
+//! dodai-os-host --device watch-round --png out.png [--tap X,Y]... [--renderer embedded|skia]
 //! dodai-os-host --device p4-7in --window        (needs --features window)
 //! ```
 
 use std::process::ExitCode;
 
-use dodai_os_host::{DeviceProfile, PROFILES, Session, png_bytes};
+use dodai_os_host::{DeviceProfile, PROFILES, Session, png_bytes, png_skia};
+
+/// Which Tokonoma backend draws the PNG.
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+enum Backend {
+    /// The integer backend the boards use, on a 16-bit framebuffer.
+    #[default]
+    Embedded,
+    /// The anti-aliased backend.
+    Skia,
+}
 
 #[derive(Debug, Default, PartialEq, Eq)]
 struct Options {
     list: bool,
     device: Option<String>,
+    renderer: Backend,
     png: Option<String>,
     window: bool,
     taps: Vec<(i16, i16)>,
@@ -41,6 +52,13 @@ fn parse(args: impl IntoIterator<Item = String>) -> Result<Options, String> {
             "--window" => o.window = true,
             "--device" => o.device = Some(value("--device")?),
             "--png" => o.png = Some(value("--png")?),
+            "--renderer" => {
+                o.renderer = match value("--renderer")?.as_str() {
+                    "embedded" => Backend::Embedded,
+                    "skia" => Backend::Skia,
+                    other => return Err(format!("unknown renderer '{other}'; embedded or skia")),
+                }
+            }
             "--tap" => o.taps.push(parse_tap(&value("--tap")?)?),
             other => return Err(format!("unknown argument '{other}'")),
         }
@@ -63,7 +81,10 @@ fn run(o: &Options) -> Result<(), String> {
         session.tap(x, y);
     }
     if let Some(path) = &o.png {
-        let bytes = png_bytes(session.display()).map_err(|e| e.to_string())?;
+        let bytes = match o.renderer {
+            Backend::Embedded => png_bytes(session.display()).map_err(|e| e.to_string())?,
+            Backend::Skia => png_skia(&session)?,
+        };
         std::fs::write(path, bytes).map_err(|e| format!("{path}: {e}"))?;
         eprintln!("wrote {path}");
     }
@@ -109,6 +130,34 @@ mod tests {
         assert_eq!(o.png.as_deref(), Some("a.png"));
         assert_eq!(o.taps, [(10, 20), (-1, 5)]);
         assert!(o.window && !o.list);
+    }
+
+    #[test]
+    fn the_renderer_defaults_to_the_boards_and_can_be_chosen() {
+        assert_eq!(
+            parse(args("--png a.png")).unwrap().renderer,
+            Backend::Embedded
+        );
+        let o = parse(args("--renderer skia")).unwrap();
+        assert_eq!(o.renderer, Backend::Skia);
+        assert!(parse(args("--renderer vello")).is_err());
+        assert!(parse(args("--renderer")).is_err());
+    }
+
+    #[test]
+    fn both_renderers_write_a_png() {
+        let dir = std::env::temp_dir().join(format!("dodai-host-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        for backend in ["embedded", "skia"] {
+            let path = dir.join(format!("{backend}.png"));
+            let cmd = format!(
+                "--device watch-round --renderer {backend} --tap 200,150 --png {}",
+                path.display()
+            );
+            run(&parse(args(&cmd)).unwrap()).unwrap();
+            assert!(std::fs::metadata(&path).unwrap().len() > 100, "{backend}");
+        }
+        std::fs::remove_dir_all(&dir).unwrap();
     }
 
     #[test]

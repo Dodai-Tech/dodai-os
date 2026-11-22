@@ -17,6 +17,8 @@ use embedded_graphics::{
     pixelcolor::{IntoStorage, Rgb565},
     prelude::DrawTarget,
 };
+use tokonoma::Renderer;
+use tokonoma_embedded::Embedded;
 
 #[cfg(feature = "window")]
 pub mod window;
@@ -253,7 +255,7 @@ const fn app(name: &'static str, requires: &[Capability]) -> AppInfo {
 #[derive(Debug)]
 pub struct Session {
     profile: &'static DeviceProfile,
-    display: HostDisplay,
+    renderer: Embedded<HostDisplay>,
     ui: Ui<'static>,
     gestures: GestureRecognizer,
 }
@@ -267,7 +269,7 @@ impl Session {
         }
         let mut session = Self {
             profile,
-            display: HostDisplay::new(profile),
+            renderer: Embedded::new(HostDisplay::new(profile)),
             ui: Ui::new(
                 profile.capabilities,
                 &DEMO_APPS,
@@ -288,7 +290,7 @@ impl Session {
     /// The framebuffer.
     #[must_use]
     pub const fn display(&self) -> &HostDisplay {
-        &self.display
+        self.renderer.target()
     }
 
     /// The shell, to inspect which screen is up.
@@ -297,10 +299,19 @@ impl Session {
         &self.ui
     }
 
-    /// Paints the shell into the framebuffer.
+    /// Paints the shell into the framebuffer, with the integer backend that the boards use.
     pub fn render(&mut self) {
-        // The framebuffer cannot fail to draw (`Infallible`).
-        let Ok(()) = self.ui.draw(&mut self.display);
+        // Drawing into memory cannot fail; the only errors a renderer has are about its state stack,
+        // which the shell does not use.
+        let _ = self.ui.draw(&mut self.renderer);
+    }
+
+    /// Paints the current screen with any other backend, for example the anti-aliased one.
+    ///
+    /// # Errors
+    /// The renderer's error.
+    pub fn draw_with<R: Renderer>(&self, renderer: &mut R) -> Result<(), R::Error> {
+        self.ui.draw(renderer)
     }
 
     fn apply(&mut self, gesture: Option<Gesture>) -> bool {
@@ -369,6 +380,19 @@ pub fn png_bytes(display: &HostDisplay) -> Result<Vec<u8>, png::EncodingError> {
     encoder.set_depth(png::BitDepth::Eight);
     encoder.write_header()?.write_image_data(&rgb888(display))?;
     Ok(out)
+}
+
+/// The current screen drawn with the anti-aliased backend (`tokonoma-skia`), as a PNG file. The
+/// shell code is the same as on the boards; only the renderer differs.
+///
+/// # Errors
+/// A message when the surface cannot exist or the encoder fails.
+pub fn png_skia(session: &Session) -> Result<Vec<u8>, String> {
+    let p = session.profile();
+    let mut skia = tokonoma_skia::Skia::new(u32::from(p.width), u32::from(p.height))
+        .ok_or_else(|| "the device has no screen".to_owned())?;
+    session.draw_with(&mut skia).map_err(|e| format!("{e:?}"))?;
+    skia.png().map_err(|e| e.0)
 }
 
 #[cfg(test)]
@@ -491,6 +515,18 @@ mod tests {
         let decoder = png::Decoder::new(std::io::Cursor::new(&bytes));
         let reader = decoder.read_info().unwrap();
         assert_eq!((reader.info().width, reader.info().height), (466, 466));
+    }
+
+    #[test]
+    fn the_anti_aliased_png_has_the_screen_size_and_differs_from_the_panel_one() {
+        let mut s = Session::new(DeviceProfile::by_name("s3-amoled-2.06").unwrap()).unwrap();
+        s.tap(300, 56);
+        let smooth = png_skia(&s).unwrap();
+        assert_eq!(&smooth[..8], b"\x89PNG\r\n\x1a\n");
+        let decoder = png::Decoder::new(std::io::Cursor::new(&smooth));
+        let reader = decoder.read_info().unwrap();
+        assert_eq!((reader.info().width, reader.info().height), (410, 502));
+        assert_ne!(smooth, png_bytes(s.display()).unwrap());
     }
 
     #[test]

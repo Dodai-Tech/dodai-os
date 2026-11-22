@@ -15,6 +15,7 @@ use dodai_os_core::{AppInfo, CapabilitySet, GestureRecognizer};
 use dodai_os_drivers::{co5300::Co5300, ft3168::Ft3168};
 use dodai_os_hal::{Clock, Display, Rect, Touch};
 use dodai_os_shell::{FrameBuf, Ui};
+use tokonoma_embedded::Embedded;
 use esp_backtrace as _;
 use esp_hal::{
     clock::CpuClock,
@@ -115,12 +116,14 @@ fn main() -> ! {
     // Framebuffer in PSRAM, one RGB565 value per pixel.
     let (w, h) = Display::size(&display);
     let pixels = vec![0u16; usize::from(w) * usize::from(h)].leak();
-    let Some(mut fb) = FrameBuf::new(w, h, pixels) else { panic!("framebuffer size") };
+    let Some(fb) = FrameBuf::new(w, h, pixels) else { panic!("framebuffer size") };
+    // Tokonoma's integer backend draws into it and the framebuffer tracks the rows that changed.
+    let mut canvas = Embedded::new(fb);
 
     let mut ui = Ui::new(board::CAPABILITIES, &APPS, (w, h));
     let mut gestures = GestureRecognizer::default();
-    let _ = ui.draw(&mut fb);
-    flush(&mut display, &mut fb);
+    let _ = ui.draw(&mut canvas);
+    flush(&mut display, canvas.target_mut());
     log::info!("shell drawn; waiting for touch");
 
     let mut next_beat = BootClock.now_ms();
@@ -141,8 +144,8 @@ fn main() -> ! {
             redraw |= ui.on_gesture(gesture) != dodai_os_shell_model::Output::None;
         }
         if redraw {
-            let _ = ui.draw(&mut fb);
-            flush(&mut display, &mut fb);
+            let _ = ui.draw(&mut canvas);
+            flush(&mut display, canvas.target_mut());
         }
         delay.delay_millis(10);
     }

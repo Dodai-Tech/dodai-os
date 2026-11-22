@@ -1,6 +1,6 @@
 [package]
 name = "dodai-os-shell"
-description = "Dodai OS shell view: draws the launcher and apps with embedded-graphics on any RGB565 target (no_std)"
+description = "Dodai OS shell view: draws the launcher and apps through Tokonoma's Renderer on any backend (no_std)"
 readme = "../../README.md"
 version.workspace = true
 edition.workspace = true
@@ -18,7 +18,12 @@ path = "src/lib.rs"
 [dependencies]
 dodai-os-core.workspace = true
 dodai-os-shell-model.workspace = true
+tokonoma.workspace = true
 embedded-graphics.workspace = true
 
 [lints]
 workspace = true
+
+[dev-dependencies]
+tokonoma-embedded.workspace = true
+tokonoma-skia.workspace = true

@@ -1,7 +1,7 @@
-//! The Dodai OS shell view: a status bar, the app grid and a foreground-app page, drawn with
-//! `embedded-graphics` into any RGB565 target. The same code draws on a microcontroller display,
-//! in a host window and into a PNG. Logic (paging, hit testing, navigation) lives in
-//! `dodai-os-shell-model`; this crate only lays out and paints it.
+//! The Dodai OS shell view: a status bar, the app grid and a foreground-app page, drawn through
+//! Tokonoma's `Renderer` trait. The same code draws on a microcontroller display (integer backend),
+//! in a host window and into a PNG (anti-aliased backend). Logic (paging, hit testing, navigation)
+//! lives in `dodai-os-shell-model`; this crate only lays out and paints it.
 #![cfg_attr(not(test), no_std)]
 
 use core::fmt::Write;
@@ -11,38 +11,36 @@ pub use framebuf::FrameBuf;
 
 use dodai_os_core::{AppInfo, CapabilitySet, Gesture, Point as TouchPoint};
 use dodai_os_shell_model::{Launcher, Output, Screen, Shell};
-use embedded_graphics::{
-    mono_font::{MonoTextStyle, ascii::FONT_10X20},
-    pixelcolor::Rgb565,
-    prelude::*,
-    primitives::{Circle, PrimitiveStyle, Rectangle, RoundedRectangle},
-    text::{Alignment, Baseline, Text},
-};
+use tokonoma::{Align, Color, Point, Rect, Renderer, TextStyle};
 
 /// Colors of the shell. Dodai design tokens will fill these in.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Theme {
     /// Screen background.
-    pub background: Rgb565,
+    pub background: Color,
     /// Status bar and card surface.
-    pub surface: Rgb565,
+    pub surface: Color,
     /// Highlight (icon discs).
-    pub accent: Rgb565,
+    pub accent: Color,
     /// Text.
-    pub text: Rgb565,
+    pub text: Color,
 }
 
 impl Theme {
     /// The default dark theme.
     pub const DARK: Self = Self {
-        background: Rgb565::new(1, 2, 2),
-        surface: Rgb565::new(4, 9, 5),
-        accent: Rgb565::new(3, 40, 20),
-        text: Rgb565::new(31, 63, 31),
+        background: Color::rgb(8, 8, 16),
+        surface: Color::rgb(33, 38, 41),
+        accent: Color::rgb(24, 162, 165),
+        text: Color::WHITE,
     };
 }
 
 const MARGIN: i32 = 8;
+/// The line height of every text in the shell, in pixels.
+const TEXT: i32 = 20;
+/// Distance from the top of a 20 px glyph row to its baseline.
+const BASELINE: i32 = 15;
 
 /// A fixed-capacity text buffer, so labels need no allocation.
 #[derive(Default)]
@@ -133,50 +131,44 @@ impl<'a> Ui<'a> {
     /// Paints the current screen.
     ///
     /// # Errors
-    /// Returns the target's error when drawing fails.
-    pub fn draw<D: DrawTarget<Color = Rgb565>>(&self, target: &mut D) -> Result<(), D::Error> {
+    /// Returns the renderer's error when drawing fails.
+    pub fn draw<R: Renderer>(&self, r: &mut R) -> Result<(), R::Error> {
         let t = self.theme;
-        target.clear(t.background)?;
-        let style = MonoTextStyle::new(&FONT_10X20, t.text);
+        r.clear(t.background)?;
+        let text = TextStyle::new(TEXT as u32, t.text);
         let (w, h) = (i32::from(self.size.0), i32::from(self.size.1));
         let bar = i32::from(self.bar);
 
-        Rectangle::new(
-            Point::zero(),
-            Size::new(u32::from(self.size.0), u32::from(self.bar)),
-        )
-        .into_styled(PrimitiveStyle::with_fill(t.surface))
-        .draw(target)?;
+        r.fill_rect(
+            Rect::new(0, 0, u32::from(self.size.0), u32::from(self.bar)),
+            0,
+            t.surface,
+        )?;
         let mut title = Label::default();
         let _ = match self.shell.screen() {
             Screen::Launcher => write!(title, "Dodai"),
             Screen::App(app) => write!(title, "< {}", app.name),
         };
-        Text::with_baseline(
-            title.as_str(),
-            Point::new(MARGIN, (bar - 20) / 2),
-            style,
-            Baseline::Top,
-        )
-        .draw(target)?;
+        r.draw_text(title.as_str(), Point::new(MARGIN, (bar - TEXT) / 2), &text)?;
 
         match self.shell.screen() {
-            Screen::App(app) => {
-                Text::with_alignment(app.name, Point::new(w / 2, h / 2), style, Alignment::Center)
-                    .draw(target)
-                    .map(drop)
-            }
-            Screen::Launcher => self.draw_grid(target, style, (w, h - bar)),
+            Screen::App(app) => r.draw_text(
+                app.name,
+                Point::new(w / 2, h / 2 - BASELINE),
+                &text.aligned(Align::Center),
+            ),
+            Screen::Launcher => self.draw_grid(r, &text, (w, h - bar)),
         }
     }
 
-    fn draw_grid<D: DrawTarget<Color = Rgb565>>(
+    fn draw_grid<R: Renderer>(
         &self,
-        target: &mut D,
-        style: MonoTextStyle<'_, Rgb565>,
+        r: &mut R,
+        text: &TextStyle,
         (w, h): (i32, i32),
-    ) -> Result<(), D::Error> {
+    ) -> Result<(), R::Error> {
         let t = self.theme;
+        let centered = text.aligned(Align::Center);
         let launcher = self.shell.launcher();
         let (cols, rows) = (i32::from(self.cols), i32::from(self.rows));
         let top = i32::from(self.bar);
@@ -186,44 +178,37 @@ impl<'a> Ui<'a> {
             let (col, row) = (i % cols, i / cols);
             let (x0, y0) = (col * w / cols, top + row * h / rows);
             let (cw, ch) = ((col + 1) * w / cols - x0, top + (row + 1) * h / rows - y0);
-            let card = Rectangle::new(
-                Point::new(x0 + MARGIN, y0 + MARGIN),
-                Size::new(
-                    (cw - 2 * MARGIN).max(1) as u32,
-                    (ch - 2 * MARGIN).max(1) as u32,
-                ),
+            let card = Rect::new(
+                x0 + MARGIN,
+                y0 + MARGIN,
+                (cw - 2 * MARGIN).max(1) as u32,
+                (ch - 2 * MARGIN).max(1) as u32,
             );
-            RoundedRectangle::with_equal_corners(card, Size::new(14, 14))
-                .into_styled(PrimitiveStyle::with_fill(t.surface))
-                .draw(target)?;
+            r.fill_rect(card, 14, t.surface)?;
             let (cx, cy) = (x0 + cw / 2, y0 + ch / 2);
-            Circle::with_center(Point::new(cx, cy - 12), 44)
-                .into_styled(PrimitiveStyle::with_fill(t.accent))
-                .draw(target)?;
+            r.fill_circle(Point::new(cx, cy - 12), 22, t.accent)?;
             let mut initial = Label::default();
             let _ = write!(initial, "{}", app.name.chars().next().unwrap_or('?'));
-            Text::with_alignment(
+            r.draw_text(
                 initial.as_str(),
-                Point::new(cx, cy - 5),
-                style,
-                Alignment::Center,
-            )
-            .draw(target)?;
-            Text::with_alignment(app.name, Point::new(cx, cy + 34), style, Alignment::Center)
-                .draw(target)?;
+                Point::new(cx, cy - 5 - BASELINE),
+                &centered,
+            )?;
+            r.draw_text(app.name, Point::new(cx, cy + 34 - BASELINE), &centered)?;
         }
 
         let pages = launcher.page_count();
         if pages > 1 {
             let mut label = Label::default();
             let _ = write!(label, "{}/{}", launcher.page() + 1, pages);
-            Text::with_alignment(
+            r.draw_text(
                 label.as_str(),
-                Point::new(i32::from(self.size.0) - MARGIN, i32::from(self.bar) / 2 + 5),
-                style,
-                Alignment::Right,
-            )
-            .draw(target)?;
+                Point::new(
+                    i32::from(self.size.0) - MARGIN,
+                    i32::from(self.bar) / 2 + 5 - BASELINE,
+                ),
+                &text.aligned(Align::Right),
+            )?;
         }
         Ok(())
     }
@@ -232,11 +217,12 @@ impl<'a> Ui<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use core::convert::Infallible;
     use dodai_os_core::{
         Capability::{Display, Touch},
         Direction,
     };
+    use tokonoma::Probe;
+    use tokonoma_embedded::{Embedded, Frame};
 
     const fn app(name: &'static str) -> AppInfo {
         AppInfo {
@@ -257,46 +243,20 @@ mod tests {
     ];
     const BOARD: CapabilitySet = CapabilitySet::of(&[Display, Touch]);
 
-    /// A target that records pixels in a small buffer.
-    struct Grid {
-        w: u32,
-        px: std::vec::Vec<Rgb565>,
+    type Panel = Embedded<Frame<Vec<u16>>>;
+
+    /// The integer backend on a 16-bit framebuffer, as on the board.
+    fn screen(w: u16, h: u16) -> Panel {
+        Embedded::new(Frame::new(w, h, vec![0u16; usize::from(w) * usize::from(h)]).unwrap())
     }
-    impl Grid {
-        fn new(w: u32, h: u32) -> Self {
-            Self {
-                w,
-                px: std::vec![Rgb565::BLACK; (w * h) as usize],
-            }
-        }
-        fn at(&self, x: u32, y: u32) -> Rgb565 {
-            self.px[(y * self.w + x) as usize]
-        }
+
+    /// What a color looks like on the 16-bit panel.
+    fn on_panel(c: Color) -> Color {
+        Color::from_rgb565(c.to_rgb565())
     }
-    impl OriginDimensions for Grid {
-        fn size(&self) -> Size {
-            Size::new(self.w, self.px.len() as u32 / self.w)
-        }
-    }
-    impl DrawTarget for Grid {
-        type Color = Rgb565;
-        type Error = Infallible;
-        fn draw_iter<I: IntoIterator<Item = Pixel<Rgb565>>>(
-            &mut self,
-            pixels: I,
-        ) -> Result<(), Infallible> {
-            for Pixel(p, c) in pixels {
-                if p.x >= 0
-                    && p.y >= 0
-                    && (p.x as u32) < self.w
-                    && ((p.y as u32) * self.w + p.x as u32) < self.px.len() as u32
-                {
-                    let i = (p.y as u32 * self.w + p.x as u32) as usize;
-                    self.px[i] = c;
-                }
-            }
-            Ok(())
-        }
+
+    fn at(s: &Panel, x: i32, y: i32) -> Color {
+        s.pixel(x, y).unwrap()
     }
 
     fn ui() -> Ui<'static> {
@@ -315,15 +275,22 @@ mod tests {
 
     #[test]
     fn draws_bar_cards_and_background() {
-        let mut g = Grid::new(410, 502);
-        ui().draw(&mut g).unwrap();
-        assert_eq!(g.at(300, 20), Theme::DARK.surface, "status bar");
+        let mut s = screen(410, 502);
+        ui().draw(&mut s).unwrap();
+        let t = Theme::DARK;
+        assert_eq!(at(&s, 300, 20), on_panel(t.surface), "status bar");
         assert_eq!(
-            g.at(84, 101),
-            Theme::DARK.accent,
+            at(&s, 84, 101),
+            on_panel(t.accent),
             "icon disc of the first app"
         );
-        assert_eq!(g.at(2, 495), Theme::DARK.background, "margin");
+        assert_eq!(at(&s, 2, 495), on_panel(t.background), "margin");
+        assert_eq!(
+            at(&s, 8, 44),
+            on_panel(t.background),
+            "the card's corner is rounded"
+        );
+        assert_eq!(at(&s, 60, 60), on_panel(t.surface), "inside the card");
     }
 
     #[test]
@@ -333,9 +300,10 @@ mod tests {
         let out = u.on_gesture(tap(300, 36 + 20));
         assert!(matches!(out, Output::Launch(a) if a.name == "Clock"));
         assert!(matches!(u.shell().screen(), Screen::App(a) if a.name == "Clock"));
-        let mut g = Grid::new(410, 502);
-        u.draw(&mut g).unwrap();
-        let text = (180..230).any(|x| (230..255).any(|y| g.at(x, y) == Theme::DARK.text));
+        let mut s = screen(410, 502);
+        u.draw(&mut s).unwrap();
+        let white = on_panel(Theme::DARK.text);
+        let text = (180..230).any(|x| (230..255).any(|y| at(&s, x, y) == white));
         assert!(text, "app page shows the app name");
         assert_eq!(u.on_gesture(tap(10, 10)), Output::Redraw);
         assert!(matches!(u.shell().screen(), Screen::Launcher));
@@ -349,8 +317,11 @@ mod tests {
             u.on_gesture(Gesture::Swipe(Direction::Left)),
             Output::Redraw
         );
-        let mut g = Grid::new(410, 502);
-        u.draw(&mut g).unwrap();
+        let mut s = screen(410, 502);
+        u.draw(&mut s).unwrap();
+        let white = on_panel(Theme::DARK.text);
+        let counter = (340..410).any(|x| (8..30).any(|y| at(&s, x, y) == white));
+        assert!(counter, "the page counter is in the top bar, not clipped");
     }
 
     #[test]
@@ -358,8 +329,8 @@ mod tests {
         const LONG: [AppInfo; 1] = [app("A name much longer than the label buffer can hold")];
         for size in [(1, 1), (30, 30), (466, 466), (2000, 2000)] {
             let u = Ui::new(BOARD, &LONG, size);
-            let mut g = Grid::new(u32::from(size.0), u32::from(size.1));
-            u.draw(&mut g).unwrap();
+            let mut s = screen(size.0, size.1);
+            u.draw(&mut s).unwrap();
         }
     }
 
@@ -369,5 +340,30 @@ mod tests {
         let _ = write!(l, "{}", "é".repeat(20));
         assert!(l.as_str().chars().all(|c| c == 'é'));
         assert!(l.as_str().len() <= 24);
+    }
+
+    #[test]
+    fn the_embedded_and_the_anti_aliased_backends_draw_the_same_layout() {
+        let u = ui();
+        let mut a = screen(410, 502);
+        u.draw(&mut a).unwrap();
+        let mut b = tokonoma_skia::Skia::new(410, 502).unwrap();
+        u.draw(&mut b).unwrap();
+        // Compare the flat areas; rounded corners and discs differ at their edges only.
+        let near = |p: Color, q: Color| {
+            p.r.abs_diff(q.r) <= 10 && p.g.abs_diff(q.g) <= 10 && p.b.abs_diff(q.b) <= 10
+        };
+        for (x, y) in [(300, 20), (60, 60), (2, 495), (205, 300), (84, 101)] {
+            let (p, q) = (a.pixel(x, y).unwrap(), b.pixel(x, y).unwrap());
+            assert!(near(p, q), "({x}, {y}): {p:?} vs {q:?}");
+        }
+        let differing = (0..502)
+            .flat_map(|y| (0..410).map(move |x| (x, y)))
+            .filter(|&(x, y)| !near(a.pixel(x, y).unwrap(), b.pixel(x, y).unwrap()))
+            .count();
+        assert!(
+            differing < 410 * 502 / 25,
+            "{differing} pixels differ between the backends"
+        );
     }
 }
