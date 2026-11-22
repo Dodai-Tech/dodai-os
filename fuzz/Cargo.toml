@@ -15,8 +15,8 @@ dodai-os-core = { path = "../crates/dodai-os-core" }
 [workspace]
 
 [[bin]]
-name = "parse_kv"
-path = "fuzz_targets/parse_kv.rs"
+name = "gestures"
+path = "fuzz_targets/gestures.rs"
 test = false
 doc = false
 bench = false

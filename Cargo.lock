@@ -5,3 +5,10 @@ version = 4
 [[package]]
 name = "dodai-os-core"
 version = "0.1.0"
+
+[[package]]
+name = "dodai-os-hal"
+version = "0.1.0"
+dependencies = [
+ "dodai-os-core",
+]

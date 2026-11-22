@@ -42,7 +42,7 @@ fn run() -> anyhow::Result<()> {
     log::info!("online: {ip:?}");
 
     // Pure logic from the core crate (unit-tested and fuzzed on the host).
-    log::info!("{:?}", dodai_os_core::parse_kv("chip = esp32s3"));
+    log::info!("{:?}", dodai_os_core::CapabilitySet::of(\&[dodai_os_core::Capability::Wifi]).len());
     loop {
         FreeRtos::delay_ms(10_000);
     }

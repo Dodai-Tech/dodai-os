@@ -130,7 +130,7 @@ def "main backup" [--port: string = "", --dir: path = "backups"] {
     let tmp = mktemp
     let read = {|off: int, len: int|
         ^espflash read-flash ...$p (hex $off) (hex $len) $tmp | complete | ignore
-        open --raw $tmp
+        open --raw $tmp | into binary
     }
     do $read 0x8000 0x1000 | save -f ($dir | path join ptable.bin)
     let table = parse_ptable (open --raw ($dir | path join ptable.bin))
