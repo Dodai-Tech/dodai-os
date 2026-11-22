@@ -64,6 +64,22 @@ monitor port="":
 backup port="":
     nu scripts/esp.nu backup --port "{{ port }}"
 
+# Build an esp-hal (no_std) board firmware, no ESP-IDF
+native-build board="s3-amoled-206":
+    nu scripts/native.nu build --board {{ board }}
+
+# Install it into an OTA slot and select it; bootloader, partition table and native firmware stay
+native-install board="s3-amoled-206" slot="ota_1" port="":
+    nu scripts/native.nu install --board {{ board }} --slot {{ slot }} --port "{{ port }}"
+
+# Boot the board's native firmware again (erases otadata only)
+native-restore port="":
+    nu scripts/native.nu native --port "{{ port }}"
+
+# Serial monitor for an esp-hal board
+native-monitor port="":
+    nu scripts/native.nu monitor --port "{{ port }}"
+
 
 # ── Test & quality ────────────────────────────────────────────────────────────
 

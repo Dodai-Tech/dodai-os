@@ -14,3 +14,6 @@
 **/sdkconfig.defaults
 backups/
 /config.toml
+
+# Firmware crates are separate cargo projects with their own target dir
+crates/*/target/

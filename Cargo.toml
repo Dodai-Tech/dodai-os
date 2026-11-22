@@ -13,6 +13,7 @@ members = [
 ]
 exclude = [
     "crates/dodai-os-esp32s3",
+    "crates/dodai-os-s3-amoled-206",
 ]
 
 # One version for the core and the workspace; `just bump X.Y.Z` edits it. Firmware crates keep

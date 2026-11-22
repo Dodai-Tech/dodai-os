@@ -6,6 +6,9 @@
 
 use core::fmt::Write;
 
+pub mod framebuf;
+pub use framebuf::FrameBuf;
+
 use dodai_os_core::{AppInfo, CapabilitySet, Gesture, Point as TouchPoint};
 use dodai_os_shell_model::{Launcher, Output, Screen, Shell};
 use embedded_graphics::{
