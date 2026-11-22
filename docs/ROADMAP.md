@@ -37,7 +37,13 @@ of the design are in [ARCHITECTURE.md](ARCHITECTURE.md). Status: `[x]` done, `[ 
 - [ ] Tokonoma: `tokonoma-vello`, GPU backend behind a feature, passing the same conformance suite
 - [ ] Fusuma repo: widget tree, `taffy` layout, event and focus routing, theme from the design tokens
 - [ ] Fusuma widgets: label, button, toggle, slider, list with scrolling, dialog; rebuild the launcher and settings on them
-- [ ] Platform adapters: `winit` + `softbuffer` for desktop, Android and iOS windows
+- [ ] Text stack in pure Rust (`parley` + `skrifa`, or `cosmic-text` + `swash`): shaping, fonts, wrapping
+- [ ] Text input with an input method (`winit` events) and accessibility (`AccessKit`) in the widgets
+- [ ] `fusuma-platform-mcu` (Dodai OS boards) and `fusuma-platform-desktop` (`winit`)
+- [ ] `fusuma-platform-android` and `fusuma-platform-ios`: native windows, no web wrapper
+- [ ] `dodai-ui-fusuma`: the Dodai UI design system for Fusuma, as one more `dodai-ui-<toolkit>` adapter
+- [ ] `fusuma-platform-web` (later, optional): WebAssembly drawn into a canvas, no DOM widgets
+- [ ] `dodai-ui-fx`: its `Painter` trait overlaps Tokonoma's `Renderer`; draw effects through Tokonoma
 
 ## Phase 2: more boards
 - [ ] ESP32-P4 7" touch display (`riscv32imafc`, esp_hosted WiFi)
@@ -58,15 +64,21 @@ of the design are in [ARCHITECTURE.md](ARCHITECTURE.md). Status: `[x]` done, `[ 
 - [ ] Standalone on Raspberry Pi and QEMU ARM (`virt`)
 - [ ] Standalone on x86_64 (QEMU `q35`): UEFI framebuffer, VirtIO, then real PCs
 
-### Dodai DE track (parallel to phase 4)
-- [ ] Split `dodai-os-shell` into `dodai-os-shell-model` (pure logic) and the Slint view
+### Kawara track (the Dodai desktop environment, parallel to phase 4)
+- [x] `dodai-os-shell` split into `dodai-os-shell-model` (pure logic) and the view
+- [ ] Rename the shared model to a neutral `dodai-shell-model` when Kawara starts to use it
 - [ ] Wayland compositor prototype (Smithay), panel and launcher on the shell model
 - [ ] Session that starts from a display manager; settings app shared with Dodai OS
-- [ ] Own repos: `dodai-de`; `dodai-os` keeps only the portable crates
+- [ ] Own repos: `kawara`; `dodai-os` keeps only the portable crates
+
+### Noren (the app store)
+- [ ] Catalogue and install logic, with a Fusuma front end; backends as separate crates (`noren-flatpak`, `noren-pacman`)
+- [ ] Research: apps for Dodai OS on microcontrollers (signed OTA images or sandboxed WebAssembly modules); apps are compiled in today
+- [ ] Open: publishing and review, signing, who may submit, paid apps
 
 ### Dodai Linux (Arch-based)
-- [ ] `archiso` image that boots into Dodai DE, built by a nightly in CI
-- [ ] PKGBUILD repo and `pacman` repository for the DE and the shared apps
+- [ ] `archiso` image that boots into Kawara, built by a nightly in CI
+- [ ] PKGBUILD repo and `pacman` repository for Kawara and the shared apps
 - [ ] First-boot setup and installer
 - [ ] Own repo: `dodai-linux`
 

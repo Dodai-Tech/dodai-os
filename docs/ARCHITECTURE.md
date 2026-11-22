@@ -42,8 +42,8 @@ that name.
 | Product | What it is | Built on |
 |---|---|---|
 | **Dodai OS** | Own microkernel and app platform, staged by hardware: RISC-V ESPs first, then Xtensa, ARM, x86, open or unlockable phones, tablets and watches | own kernel (ESP-IDF while bootstrapping) |
-| **Dodai DE** | Desktop and mobile shell in Rust: Wayland compositor, panel, launcher, settings | Linux (probably Smithay) |
-| **Dodai Linux** | Arch-based distribution that ships Dodai DE: installer, package repo, `archiso` images | Arch Linux |
+| **Kawara** (the Dodai desktop environment) | Desktop and mobile shell in Rust: Wayland compositor, panel, launcher, settings | Linux (probably Smithay) |
+| **Dodai Linux** | Arch-based distribution that ships Kawara: installer, package repo, `archiso` images | Arch Linux |
 
 Shared by all three: `dodai-core` and `dodai-ui` (tokens, themes, widgets), `dodai-os-core`
 (`no_std`: capabilities, gestures, the `App` contract), the shell model (launcher, navigation,
@@ -58,20 +58,49 @@ Dodai Linux covers desktops and laptops first.
 
 ## The Dodai family
 
-Names follow a Japanese house: Dodai is the foundation, and each layer above has its own name, so
-each can be used without the others.
+Names follow a Japanese house: Dodai (土台) is the foundation, and each layer above has its own
+name, so each can be used without the others.
 
-| Part | Name | Notes |
+| House part | Product | Name | Notes |
+|---|---|---|---|
+| Foundation 土台 | OS with its own microkernel | **Dodai OS** (`dodai-os-*`) | this repo |
+| Sliding doors 襖 | UI toolkit | **Fusuma** | OS-agnostic: layout, widgets, animation. Planned. |
+| Alcove 床の間 | renderer | **Tokonoma** | OS-agnostic: `tokonoma` (trait), `-embedded`, `-skia`, later `-vello`. Own repo. |
+| Finish | design system | **Dodai UI** (`dodai-ui-*`) | tokens, four designs, one adapter crate per toolkit, including `dodai-ui-fusuma` |
+| Roof tiles 瓦 | desktop and mobile environment | **Kawara** | Linux, Wayland. Planned. |
+| Shop curtain 暖簾 | app store | **Noren** | front end over Flatpak and pacman; a store for Dodai OS is research. Planned. |
+| The house | Arch-based distribution | **Dodai Linux** | ships Kawara and Noren. Planned. |
+
+Dependencies point one way: Dodai OS and Kawara use Fusuma, Fusuma uses Tokonoma, and Tokonoma
+knows nothing above it. `dodai-ui-fusuma` uses Fusuma and the design tokens; Fusuma never imports
+`dodai-ui-*`.
+
+Naming rules:
+* `dodai-ui-<toolkit>` is a design-system adapter; `dodai-ui-<capability>` is toolkit-neutral.
+* `dodai-os-<role>` is the OS; `-core` always means the portable, UI-free heart of that product.
+* Logic shared by Dodai OS and Kawara (the launcher model) gets a neutral name when Kawara starts
+  (`dodai-os-shell-model` becomes `dodai-shell-model`), so neither product depends on the other.
+
+## Rendering and platforms: native Rust, no web technology
+
+Everything draws through Tokonoma: `tokonoma-embedded` (our integer rasteriser, `no_std`),
+`tokonoma-skia` (`tiny-skia`, a pure-Rust Skia port) and later `tokonoma-vello` (`vello` on
+`wgpu`). There is no webview, HTML or CSS in Fusuma, and the C++ Skia is not used.
+
+Fusuma reaches each target through a small platform crate:
+
+| Crate | Target | Notes |
 |---|---|---|
-| Design tokens and themes | `dodai-core` and its renamed siblings | in `dodai-ui` (being renamed) |
-| OS and microkernel | **Dodai OS** | this repo |
-| UI toolkit | **Fusuma** | OS-agnostic: layout, widgets, page slides. Planned. |
-| Renderer | **Tokonoma** | OS-agnostic: `tokonoma` (trait), `tokonoma-embedded`, `tokonoma-skia`, later `tokonoma-vello`. Own repo. |
-| Desktop environment | Dodai DE (or Minka) | Linux, Wayland. Planned. |
-| Linux distribution | Dodai Linux (or Machiya) | Arch-based. Planned. |
+| `fusuma-platform-mcu` | microcontroller displays | display and touch drivers, as in Dodai OS today |
+| `fusuma-platform-desktop` | Linux, macOS, Windows | `winit` window, pixel buffer or GPU surface |
+| `fusuma-platform-android`, `fusuma-platform-ios` | phones and tablets | native windows and touch; no web wrapper |
+| Kawara's Wayland platform | Linux desktop and mobile | native, in the Kawara repo |
+| `fusuma-platform-web` | browsers, later and optional | Rust compiled to WebAssembly, drawn into a canvas; no DOM widgets |
 
-Dependencies point one way: Dodai OS and Dodai DE use Fusuma, Fusuma uses Tokonoma, and Tokonoma
-knows nothing above it.
+Because Fusuma draws everything itself it must also provide text input with an input method
+(`winit` supplies the events), accessibility (`AccessKit`) and a Rust text stack (`parley` and
+`skrifa`, or `cosmic-text` and `swash`; to be chosen). These are the costly parts on phones and the
+web, and they are listed as their own roadmap items.
 
 ## Run modes
 
