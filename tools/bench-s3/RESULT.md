@@ -18,4 +18,17 @@ both: a status bar, rounded cards with a disc and an outline each (no text). Ave
 * Not measured: text (the Vello path has no glyph call yet), the P4 (400 MHz, vector extension), and any
   SIMD (Vello's SIMD paths are not available for Xtensa, so this ran the scalar fallback).
 
+## Through Fusuma's `Renderer` trait (the `no_std` Vello backend)
+
+The same scene drawn through `fusuma-render-vello-cpu` built with `default-features = false` and `libm`,
+which is what the toolkit and the launcher would use:
+
+| Surface | raw `vello_cpu` | via the `Renderer` trait | memory of the backend |
+|---|---|---|---|
+| 410 x 502 | 260.4 ms | 267.0 ms | 957 KB |
+| 410 x 120 | 67.6 ms | 69.0 ms | 228 KB |
+| 200 x 200 | 62.0 ms | 63.6 ms | 192 KB |
+
+The trait costs about 2 to 3 percent. The backend builds `no_std` for the S3 (Xtensa) and the C6 (RISC-V).
+
 Conclusion for full frames: `vello_cpu` is slower. But a demo that repaints only the touched card (`hibari-demo-s3-vello`: 41 ms to render, 11 ms to send) felt richer and more responsive on the real screen, with smooth edges, so the preference is Vello on chips with PSRAM and partial redraws; the integer renderer stays for chips without PSRAM. See `docs/ROADMAP.md`.

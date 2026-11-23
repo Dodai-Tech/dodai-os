@@ -13,8 +13,10 @@ path = "src/main.rs"
 test = false
 
 [dependencies]
-fusuma-render = "0.2"
-fusuma-render-embedded = "0.2"
+# Local paths until the no_std Vello backend is released; one `fusuma-render` for all three.
+fusuma-render = { path = "../../../../fusuma/crates/fusuma-render" }
+fusuma-render-embedded = { path = "../../../../fusuma/crates/fusuma-render-embedded" }
+fusuma-render-vello-cpu = { path = "../../../../fusuma/crates/fusuma-render-vello-cpu", default-features = false, features = ["libm"] }
 vello_cpu = { version = "0.4", default-features = false, features = ["libm", "u8_pipeline"] }
 esp-hal = { version = "1.0.0", features = ["esp32s3", "unstable", "psram", "log-04"] }
 esp-alloc = "0.9.0"

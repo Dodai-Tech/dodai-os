@@ -12,6 +12,7 @@ use esp_backtrace as _;
 use esp_hal::{clock::CpuClock, delay::Delay, time::Instant};
 use fusuma_render::{Color, Point, Rect, Renderer};
 use fusuma_render_embedded::{Embedded, Frame};
+use fusuma_render_vello_cpu::Scene;
 use vello_cpu::{
     Pixmap, RenderContext, Resources,
     color::AlphaColor,
@@ -112,6 +113,18 @@ fn run(w: u16, h: u16) {
     log::info!("vello_cpu render:  {t_render:>8} us/frame");
     log::info!("vello_cpu to 565:  {t_convert:>8} us/frame");
     log::info!("vello_cpu total:   {:>8} us/frame", t_build + t_render + t_convert);
+    drop((ctx, resources, target));
+
+    // The same scene through Fusuma's Renderer trait on vello_cpu: what the toolkit gets.
+    let used_trait = esp_alloc::HEAP.used();
+    if let Some(mut r) = fusuma_render_vello_cpu::new(u32::from(w), u32::from(h)) {
+        let t_trait = average(|| {
+            scene_integer(&mut r, wi, hi);
+            r.with_scene(|s| to_565(s.pixels(), &mut rgb565));
+        });
+        log::info!("via Renderer trait: {t_trait:>8} us/frame (draw, render and convert)");
+        log::info!("memory: Renderer on vello_cpu used {} bytes", esp_alloc::HEAP.used().saturating_sub(used_trait));
+    }
     log::info!("memory: vello used {} bytes, heap free {} bytes", esp_alloc::HEAP.used().saturating_sub(used_before), esp_alloc::HEAP.free());
 
     // The two must show the same picture, within what 16-bit colour allows: compare a few probes.

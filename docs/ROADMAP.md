@@ -18,7 +18,7 @@ matters: each phase leaves something running on a real board. Status: `[x]` done
 
 ## Phase 1: make the S3 board a device
 
-- [ ] **Vello on the S3 in the launcher:** needs a `no_std` Vello backend in Fusuma and dirty-rectangle redraws in the launcher (Fusuma's Phase 1b); the integer renderer repaints the whole screen in 61 ms, so slides run near 10 fps
+- [ ] **Vello on the S3 in the launcher:** the `no_std` Vello backend exists in Fusuma (measured on the S3: 2 to 3 percent over raw `vello_cpu`, `tools/bench-s3/RESULT.md`, local path dependencies until it is released); what is left is dirty-rectangle redraws in the launcher (Fusuma's Phase 1b); the integer renderer repaints the whole screen in 61 ms, so slides run near 10 fps
 - [ ] **Verify on the screen:** swipes, page changes and app open and close, now that partial updates are fixed; the frame rate of a slide is unmeasured
 - [ ] **Drivers:** PCF85063 RTC, QMI8658 IMU, AXP2101 power and battery, the two buttons
 - [ ] **Status bar with real data:** time, battery, charging, later WiFi
