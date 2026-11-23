@@ -35,7 +35,7 @@ pub fn choose(profile: &DeviceProfile, build: Option<Backend>) -> Option<Choice>
 
 /// Checks a choice against the device's memory.
 #[must_use]
-pub fn check(profile: &DeviceProfile, choice: Choice) -> Fit {
+pub fn check(profile: &DeviceProfile, choice: Choice) -> (Choice, Fit) {
     fusuma_platform::check(&machine(profile), choice)
 }
 
@@ -97,17 +97,18 @@ mod tests {
         let p = device(Some(hw), true);
         assert_eq!(automatic(&p).unwrap().backend, Backend::VelloCpu);
         assert_eq!(
-            choose(&p, Some(Backend::VelloGpu)).unwrap().reason,
+            choose(&p, Some(Backend::Skia)).unwrap().reason,
             Reason::Build
         );
-        assert_eq!(check(&p, choose(&p, None).unwrap()), Fit::Fits);
+        let (c, fit) = check(&p, choose(&p, None).unwrap());
+        assert_eq!((c.backend, fit), (Backend::VelloCpu, Fit::Fits));
         assert_eq!(
             plan(&p, None, &Backend::ALL).unwrap().uses,
             Backend::VelloCpu
         );
         assert_eq!(
-            plan(&p, None, &[Backend::VelloGpu]).unwrap().uses,
-            Backend::VelloGpu
+            plan(&p, None, &[Backend::Integer]).unwrap().uses,
+            Backend::Integer
         );
         assert!(plan(&device(Some(hw), false), None, &Backend::ALL).is_none());
     }

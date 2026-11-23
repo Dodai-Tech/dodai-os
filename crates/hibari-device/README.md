@@ -25,8 +25,9 @@ ram_kb = 512
 psram_kb = 8192
 fpu = true
 
-[render]                  # optional: pin a backend (vello-cpu, vello-gpu)
+[render]                  # optional: pin a backend (integer, skia, vello-cpu, vello-gpu)
 backend = "vello-cpu"
+fallback = true           # step down if it does not fit
 ```
 
 * `Capability`, `CapabilitySet`: what a device offers and what an app needs (`const`, one `u16`).

@@ -72,11 +72,10 @@ fn main() -> ! {
     esp_alloc::psram_allocator!(peripherals.PSRAM, esp_hal::psram);
     esp_println::logger::init_logger_from_env();
     log::info!("Hibari OS on {}", PROFILE.name);
-    // Fusuma's choice for this board and why. Nothing of Fusuma is linked yet: the launcher draws with its own
-    // integer code, so this line says what it will use once it moves to Fusuma.
-    match hibari_device::plan(&PROFILE, BUILD_BACKEND, &hibari_device::Backend::ALL) {
-        Some(plan) => log::info!("Fusuma would draw with {plan} (linked now: {})", LINKED.len()),
-        None => log::warn!("this board has no screen to draw on"),
+    // Which renderer, and why: the build, the board file or the automatic rule, then what is linked.
+    match hibari_device::plan(&PROFILE, BUILD_BACKEND, &LINKED) {
+        Some(plan) => log::info!("renderer: {plan}"),
+        None => log::warn!("renderer: nothing to draw with"),
     }
 
     let delay = Delay::new();

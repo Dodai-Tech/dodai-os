@@ -38,6 +38,8 @@ struct RawHardware {
 #[serde(deny_unknown_fields)]
 struct RawRender<'a> {
     backend: Option<&'a str>,
+    #[serde(default)]
+    fallback: bool,
 }
 
 #[derive(Deserialize)]
@@ -88,7 +90,8 @@ impl DeviceProfile {
     /// gpu = false         # default false
     ///
     /// [render]            # optional
-    /// backend = "vello-cpu"   # vello-cpu or vello-gpu; default: automatic
+    /// backend = "skia"    # integer, skia, vello-cpu or vello-gpu; default: automatic
+    /// fallback = true     # step down to a lighter backend if this one does not fit; default false
     /// ```
     ///
     /// # Errors
@@ -157,6 +160,7 @@ impl DeviceProfile {
                         })
                     })
                     .transpose()?,
+                fallback: r.fallback,
             },
         };
         let profile = Self {
@@ -215,9 +219,10 @@ impl DeviceProfile {
             Some(b) => std::format!("Some(hibari_device::Backend::{})", b.variant()),
         };
         std::format!(
-            "pub const {const_name}: hibari_device::DeviceProfile = hibari_device::DeviceProfile {{\n    name: {:?},\n    display: {display},\n    capabilities: hibari_device::CapabilitySet::of(&[{}]),\n    firmware: {firmware},\n    hardware: {hardware},\n    render: hibari_device::Render {{ backend: {backend} }},\n}};\n",
+            "pub const {const_name}: hibari_device::DeviceProfile = hibari_device::DeviceProfile {{\n    name: {:?},\n    display: {display},\n    capabilities: hibari_device::CapabilitySet::of(&[{}]),\n    firmware: {firmware},\n    hardware: {hardware},\n    render: hibari_device::Render {{ backend: {backend}, fallback: {} }},\n}};\n",
             self.name,
-            caps.join(", ")
+            caps.join(", "),
+            self.render.fallback
         )
     }
 }
@@ -355,7 +360,8 @@ height = 160
 ram_kb = 512
 
 [render]
-backend = "vello-gpu"
+backend = "skia"
+fallback = true
 "#;
 
     #[test]
@@ -373,11 +379,20 @@ backend = "vello-gpu"
         assert_eq!(
             p.render,
             Render {
-                backend: Some(Backend::VelloGpu),
+                backend: Some(Backend::Skia),
+                fallback: true
             }
         );
         let none = DeviceProfile::from_toml("name = \"n\"\n").unwrap();
         assert_eq!((none.hardware, none.render), (None, Render::default()));
+        let only_fallback = DeviceProfile::from_toml("name = \"n\"\ncapabilities = [\"display\"]\n[display]\nwidth = 5\nheight = 5\n[render]\nfallback = true\n").unwrap();
+        assert_eq!(
+            only_fallback.render,
+            Render {
+                backend: None,
+                fallback: true
+            }
+        );
     }
 
     #[test]
@@ -401,8 +416,7 @@ backend = "vello-gpu"
             "ram_kb is required"
         );
         assert!(with("[hardware]\nram_kb = 512\ncpu = 1\n").contains("cpu"));
-        let headless =
-            "name = \"h\"\ncapabilities = [\"wifi\"]\n[render]\nbackend = \"vello-cpu\"\n";
+        let headless = "name = \"h\"\ncapabilities = [\"wifi\"]\n[render]\nbackend = \"skia\"\n";
         assert!(
             DeviceProfile::from_toml(headless)
                 .unwrap_err()
@@ -416,7 +430,7 @@ backend = "vello-gpu"
         let src = DeviceProfile::from_toml(WITH_RENDER).unwrap().to_rust("P");
         for want in [
             "hardware: Some(hibari_device::Hardware { ram_kb: 512, psram_kb: 0, fpu: false, gpu: false })",
-            "render: hibari_device::Render { backend: Some(hibari_device::Backend::VelloGpu) }",
+            "render: hibari_device::Render { backend: Some(hibari_device::Backend::Skia), fallback: true }",
         ] {
             assert!(src.contains(want), "{want}\n{src}");
         }
@@ -425,7 +439,8 @@ backend = "vello-gpu"
             .to_rust("B");
         assert!(
             plain.contains("hardware: None")
-                && plain.contains("render: hibari_device::Render { backend: None }")
+                && plain
+                    .contains("render: hibari_device::Render { backend: None, fallback: false }")
         );
     }
 
@@ -437,7 +452,7 @@ backend = "vello-gpu"
         let c = crate::choose(&p, None).unwrap();
         assert_eq!(c.backend, Backend::VelloCpu);
         assert!(matches!(c.reason, crate::Reason::Automatic(_)));
-        assert_eq!(crate::check(&p, c), crate::Fit::Fits);
+        assert_eq!(crate::check(&p, c).1, crate::Fit::Fits);
     }
 
     /// The device files of this repository, which the firmware and the host both load.

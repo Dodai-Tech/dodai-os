@@ -72,34 +72,50 @@ security boundary.
 
 ## Rendering
 
-Everything draws through Fusuma's `Renderer` trait, and Fusuma draws with **Vello only**: `vello_cpu`
-everywhere there is no GPU (every board), Vello on a GPU where there is one (desktop, phone). The integer and
-`tiny-skia` renderers were deleted from Fusuma. The choice is Fusuma's `fusuma-platform` crate, and
-`hibari_device` wraps it so a `DeviceProfile` can be asked.
+Everything draws through Fusuma's `Renderer` trait, and there are three CPU backends and one GPU backend, all
+passing the same conformance suite. A board does not hard-code one: it has a default that follows its
+hardware, and the others stay available.
+
+| Backend | Strength | Cost |
+|---|---|---|
+| `fusuma-render-embedded` (integer) | fastest and lightest; 2 bytes per pixel, no floating point, no allocator | no anti-aliasing, no alpha |
+| `fusuma-render-skia` (`tiny-skia`) | anti-aliased and alpha; 4 bytes per pixel; about 3 to 4 times faster than Vello without a GPU | needs an allocator; a software float library on a chip with no FPU |
+| `fusuma-render-vello-cpu` | the richest (blur, layers, glyph runs, Lottie later); same engine as the GPU | slowest and heaviest on a small chip |
+| `fusuma-render-vello` (GPU) | for a desktop or phone with a usable GPU | needs `wgpu` and a GPU |
+
+### How a device picks one
 
 `hibari_device::plan` decides, in layers, strongest first:
 
-1. **The build:** a cargo feature on the firmware (`render-vello-cpu`, `render-vello-gpu`) or `--renderer` on
-   the host tool.
-2. **The board file:** `[render] backend = "vello-cpu"` in `board.toml`.
+1. **The build:** a cargo feature on the firmware (`render-integer`, `render-skia`, `render-vello-cpu`,
+   `render-vello-gpu`; `just native-install features=render-skia`) or `--renderer` on the host tool.
+2. **The board file:** `[render] backend = "skia"` in `board.toml`, with `fallback = true` to step down to a
+   lighter backend if the chosen one does not fit in memory.
 3. **The automatic rule**, over the `[hardware]` table (`ram_kb`, `psram_kb`, `fpu`, `gpu`): a GPU gives the GPU
-   backend, anything else `vello_cpu`.
+   backend; PSRAM that holds a Vello frame twice over gives `vello_cpu`; otherwise `tiny-skia` if its frame fits
+   in the memory budget, else the integer renderer. The budget is the PSRAM plus 40 percent of the internal RAM
+   (`RAM_SHARE_PERCENT`; an assumption, since what the radio needs is not measured).
 
-Then a **memory check** (a `vello_cpu` frame is about 4.8 bytes per pixel; the budget is the PSRAM plus 40
-percent of the internal RAM, `RAM_SHARE_PERCENT`, an assumption since what the radio needs is not measured):
-a board with no room for a frame is refused with a message, like the ESP32-C6 (no PSRAM, 240x320 ran out of
-memory). And **what is built in**: a choice that is not linked is replaced by the nearest one that is.
+Then a **memory check** (an explicit choice that does not fit is kept and warned about unless `fallback = true`)
+and **what is built in**: a choice that is not linked is replaced by the nearest lighter backend that is, and
+the reason is logged: `renderer: integer (automatic: PSRAM holds a Vello frame twice over); vello-cpu is not
+built in, using integer`. The memory per backend comes from the measurements (`Backend::memory`: 2, 4 and about
+4.8 bytes per pixel).
 
-What this means today: a board with PSRAM runs Fusuma (the P4 showcase in the Fusuma repository does, with the
-choice read from the chip at boot). The S3 launcher here still draws with its own integer code and repaints the
-whole screen; it logs what Fusuma would choose and moves to Fusuma when the toolkit has the widgets it needs.
-Boards without PSRAM get a text UI (ratatui), not Fusuma.
+What this means today: the host links the integer and `vello_cpu` backends; the S3 firmware links only the
+integer one, so on the board the choice is reported at boot but the integer renderer draws. Linking the others
+into the firmware is the next step, and then the same feature or board setting picks which.
 
-What I measured, which led to Vello only: on the ESP32-S3 `vello_cpu` is about 4 times slower than the integer
-renderer for a full frame (267 against 61 ms for 410x502) and needs about 1 MB, but a demo that repainted only
-the touched card (41 ms) felt richer. On the ESP32-C6 `tiny-skia` was 3 to 4 times faster than `vello_cpu`; on
-the ESP32-P4 it looked much slower (one first frame, cause not investigated), so a ranking per chip did not
-hold. Numbers: `tools/bench-s3/RESULT.md` and `tools/bench-c6/RESULT.md`.
+The same data and the same function are what a flashing wizard (text or graphical) needs: it reads a board's
+hardware, shows the automatic choice and its cost, and lets the user override it within the limits.
+
+What I measured. On the ESP32-S3 (240 MHz, 8 MB PSRAM): `vello_cpu` is about 4 times slower than the integer
+renderer for a full frame (267 against 61 ms for 410x502) and needs about 1 MB; a demo that repainted only the
+touched card (41 ms to render) felt richer and more responsive on the real screen. On the ESP32-C6 (no PSRAM,
+no FPU, 320 KB heap): `tiny-skia` is 3 to 4 times faster than `vello_cpu` and lighter, and the integer
+renderer is 3 to 4 times faster again. Numbers: `tools/bench-s3/RESULT.md` and `tools/bench-c6/RESULT.md`.
+`tiny-skia` is not measured on the S3. The shipping launcher still uses the integer renderer and repaints the
+whole screen.
 
 A bug worth knowing: the CO5300 needs an explicit memory-write command after each address window. Without
 it a partial update lands in the wrong place and tears. Waveshare's own driver sends it; mine did not.
