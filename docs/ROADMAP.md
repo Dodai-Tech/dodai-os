@@ -22,7 +22,8 @@ matters: each phase leaves something running on a real board. Status: `[x]` done
 - [ ] **Link the other backends into the S3 firmware** (`tiny-skia`, `vello_cpu` behind the `render-*` features), a runtime setting stored on the device, and measuring `tiny-skia` on the S3
 - [ ] **Vello on the S3 in the launcher (decided: Vello always, the integer renderer goes):** the `no_std` Vello backend exists in Fusuma (measured on the S3: 2 to 3 percent over raw `vello_cpu`, `tools/bench-s3/RESULT.md`, local path dependencies until it is released); what is left is dirty-rectangle redraws in the launcher (Fusuma's Phase 1b); the integer renderer repaints the whole screen in 61 ms, so slides run near 10 fps
 - [ ] **Verify on the screen:** swipes, page changes and app open and close, now that partial updates are fixed; the frame rate of a slide is unmeasured
-- [ ] **Drivers:** PCF85063 RTC, QMI8658 IMU, AXP2101 power and battery, the two buttons
+- [x] **PCF85063 RTC driver** and a shared `DateTime` + `Rtc` trait in `hibari-hal` (host-tested with a fake chip; not yet run on the board, and the board does not share its I2C bus with it yet)
+- [ ] **Drivers:** QMI8658 IMU, AXP2101 power and battery, the two buttons
 - [ ] **Status bar with real data:** time, battery, charging, later WiFi
 - [ ] **HAL traits** for each of those, and the decision on async (display and touch stay blocking unless a reason appears)
 - [ ] **Measure memory:** free internal RAM, free PSRAM, stack high-water mark and image size, printed by the running firmware, then again with the radio on

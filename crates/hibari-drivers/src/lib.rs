@@ -7,3 +7,4 @@
 
 pub mod co5300;
 pub mod ft3168;
+pub mod pcf85063;

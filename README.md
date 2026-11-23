@@ -17,7 +17,7 @@ status bar, an app grid, touch gestures and slide transitions, installed next to
 firmware so you can go back. A demo that draws the cards anti-aliased with `vello_cpu` and repaints only
 the touched card also runs there.
 
-**What does not exist yet.** WiFi, Bluetooth, storage and settings, the power, RTC and IMU drivers, real
+**What does not exist yet.** WiFi, Bluetooth, storage and settings, the power and IMU drivers (the RTC driver exists, untested on the board), real
 apps, and the other chips (the ESP32-P4 and the ESP32-C6 are planned). See the [roadmap](docs/ROADMAP.md).
 
 **A device is a file.** `boards/<board>/board.toml` names the device, its screen, its capabilities and how

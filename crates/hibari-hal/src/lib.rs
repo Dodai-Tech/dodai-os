@@ -1,11 +1,12 @@
 //! Hardware abstraction for Hibari OS.
 //!
 //! The traits that board crates implement and that the launcher and apps use: a display, a touch
-//! panel, a backlight and a clock. [`input`] holds what a touch panel reports and the gestures made
+//! panel, a backlight and a clock ([`time`] has the calendar one). [`input`] holds what a touch panel reports and the gestures made
 //! from it. What a device *is* (its capabilities, its screen) is `hibari-device`.
 #![cfg_attr(not(test), no_std)]
 
 pub mod input;
+pub mod time;
 
 pub use hibari_device::Shape;
 use input::TouchEvent;
