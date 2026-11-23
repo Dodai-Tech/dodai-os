@@ -21,6 +21,7 @@ path = "src/lib.rs"
 toml = ["dep:toml", "dep:serde"]
 
 [dependencies]
+fusuma-platform.workspace = true
 toml = { workspace = true, optional = true }
 serde = { workspace = true, optional = true }
 

@@ -38,6 +38,8 @@ serde = { version = "1", default-features = false, features = ["derive", "std"] 
 toml = { version = "1", default-features = false, features = ["parse", "serde", "std"] }
 embedded-hal = "1.0"
 embedded-graphics = "0.8.2"
+# The renderer choice lives in Fusuma; it is not published yet, so this is a sibling checkout.
+fusuma-platform = { path = "../../fusuma/crates/fusuma-platform" }
 fusuma-anim = "0.2"
 fusuma-render = "0.2"
 fusuma-render-embedded = "0.2"

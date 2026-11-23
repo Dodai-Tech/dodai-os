@@ -19,6 +19,6 @@ mod text;
 pub use capability::{Capability, CapabilitySet};
 pub use profile::{DeviceProfile, DisplayInfo, Firmware, ProfileError, Shape};
 pub use render::{
-    Backend, Choice, Fit, Hardware, Plan, RAM_SHARE_PERCENT, Reason, Render, automatic, budget,
-    check, choose, fits, nearest, plan,
+    Backend, Choice, Fit, Hardware, Machine, Plan, RAM_SHARE_PERCENT, Reason, Render, automatic,
+    budget, check, choose, fits, machine, nearest, plan,
 };

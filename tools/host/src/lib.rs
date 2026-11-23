@@ -456,7 +456,7 @@ mod tests {
         let p = DeviceProfile::from_toml(TIGHT).unwrap();
         let plan = plan(&p, None).unwrap();
         assert!(matches!(plan.fit, Fit::TooBig { .. }));
-        assert!(plan.to_string().contains("fallback = true"));
+        assert!(plan.to_string().contains("allow a fallback"));
         // The profile borrows its text for the whole program, so the test leaks it.
         let relaxed_text: &'static str = Box::leak(
             TIGHT
