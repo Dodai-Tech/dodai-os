@@ -2,14 +2,14 @@
 //!
 //! ```text
 //! hibari-host --list
-//! hibari-host --device watch-round --png out.png [--tap X,Y]... [--renderer auto|integer|skia|vello-cpu|vello-gpu] [--at MS]
+//! hibari-host --device watch-round --png out.png [--tap X,Y]... [--renderer auto|vello-cpu|vello-gpu] [--at MS]
 //! hibari-host --device p4-7in --window        (needs --features window)
 //! ```
 
 use std::process::ExitCode;
 
 use hibari_device::Backend;
-use hibari_host::{Session, plan, png_bytes, png_vello_cpu, profile as find_profile, profiles};
+use hibari_host::{Session, plan, png_vello_cpu, profile as find_profile, profiles};
 
 #[derive(Debug, Default, PartialEq, Eq)]
 struct Options {
@@ -57,10 +57,8 @@ fn parse(args: impl IntoIterator<Item = String>) -> Result<Options, String> {
                 let name = value("--renderer")?;
                 o.renderer = match name.as_str() {
                     "auto" => None,
-                    // The old name of the integer backend.
-                    "embedded" => Some(Backend::Integer),
                     other => Some(Backend::from_name(other).ok_or_else(|| {
-                        format!("unknown renderer '{other}'; auto, integer, skia, vello-cpu or vello-gpu")
+                        format!("unknown renderer '{other}'; auto, vello-cpu or vello-gpu")
                     })?),
                 }
             }
@@ -92,10 +90,7 @@ fn run(o: &Options) -> Result<(), String> {
     if let Some(path) = &o.png {
         let plan = plan(profile, o.renderer).ok_or_else(|| format!("'{name}' has no screen"))?;
         eprintln!("renderer: {plan}");
-        let bytes = match plan.uses {
-            Backend::Integer => png_bytes(session.display()).map_err(|e| e.to_string())?,
-            _ => png_vello_cpu(&session)?,
-        };
+        let bytes = png_vello_cpu(&session)?;
         std::fs::write(path, bytes).map_err(|e| format!("{path}: {e}"))?;
         eprintln!("wrote {path}");
     }
@@ -146,9 +141,6 @@ mod tests {
         assert_eq!(parse(args("--png a.png")).unwrap().renderer, None);
         assert_eq!(parse(args("--renderer auto")).unwrap().renderer, None);
         for (flag, want) in [
-            ("integer", Backend::Integer),
-            ("embedded", Backend::Integer),
-            ("skia", Backend::Skia),
             ("vello-cpu", Backend::VelloCpu),
             ("vello-gpu", Backend::VelloGpu),
         ] {
@@ -156,6 +148,7 @@ mod tests {
             assert_eq!(o.renderer, Some(want), "{flag}");
         }
         assert!(parse(args("--renderer vello")).is_err());
+        assert!(parse(args("--renderer skia")).is_err(), "removed");
         assert!(parse(args("--renderer")).is_err());
     }
 
@@ -163,7 +156,7 @@ mod tests {
     fn both_renderers_write_a_png() {
         let dir = std::env::temp_dir().join(format!("hibari-host-{}", std::process::id()));
         std::fs::create_dir_all(&dir).unwrap();
-        for backend in ["integer", "vello-cpu", "auto", "skia"] {
+        for backend in ["vello-cpu", "auto", "vello-gpu"] {
             let path = dir.join(format!("{backend}.png"));
             let cmd = format!(
                 "--device watch-round --renderer {backend} --tap 200,150 --png {}",

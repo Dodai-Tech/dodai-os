@@ -16,16 +16,13 @@ extern crate alloc;
 
 pub mod qspi;
 
-/// The backends linked into this firmware. Add one here when its crate becomes a dependency.
-pub const LINKED: [hibari_device::Backend; 1] = [hibari_device::Backend::Integer];
+/// The Fusuma backends linked into this firmware: none yet. The launcher still draws with its own integer
+/// code; it moves to Fusuma and `vello_cpu` when the toolkit has the widgets it needs.
+pub const LINKED: [hibari_device::Backend; 0] = [];
 
 /// The renderer the build asks for, from a cargo feature; `None` leaves it to the board file and the
 /// automatic rule. If several features are on, the lightest wins.
-pub const BUILD_BACKEND: Option<hibari_device::Backend> = if cfg!(feature = "render-integer") {
-    Some(hibari_device::Backend::Integer)
-} else if cfg!(feature = "render-skia") {
-    Some(hibari_device::Backend::Skia)
-} else if cfg!(feature = "render-vello-cpu") {
+pub const BUILD_BACKEND: Option<hibari_device::Backend> = if cfg!(feature = "render-vello-cpu") {
     Some(hibari_device::Backend::VelloCpu)
 } else if cfg!(feature = "render-vello-gpu") {
     Some(hibari_device::Backend::VelloGpu)

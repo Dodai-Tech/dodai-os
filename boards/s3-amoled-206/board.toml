@@ -27,5 +27,4 @@ gpu = false
 
 # Uncomment to pin a renderer for this board; leave it out for the automatic choice.
 # [render]
-# backend = "vello-cpu"   # integer, skia, vello-cpu or vello-gpu
-# fallback = false        # true: step down to a lighter backend if the chosen one does not fit
+# backend = "vello-cpu"   # vello-cpu or vello-gpu
