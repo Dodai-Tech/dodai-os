@@ -72,24 +72,33 @@ security boundary.
 
 ## Rendering
 
-Everything draws through Fusuma's `Renderer` trait, so the choice of backend is one line per firmware.
+Everything draws through Fusuma's `Renderer` trait, and there are three CPU backends and one GPU backend, all
+passing the same conformance suite. A board does not hard-code one: it has a default that follows its
+hardware, and the others stay available.
 
-Rendering is always Vello: `vello_cpu` on every board, and the GPU backend on hardware that has a usable
-GPU (a desktop, not an ESP). There is no integer renderer in the plan.
-
-| Board | Renderer | Note |
+| Backend | Strength | Cost |
 |---|---|---|
-| ESP32-S3, ESP32-P4 (PSRAM, a screen) | `vello_cpu`, with partial redraws | needs PSRAM: a full 410x502 frame is about 1 MB, a card-sized region 200 to 230 KB |
-| ESP32-C6 (no PSRAM, no FPU) | `vello_cpu`, small surfaces only | measured: runs up to about 240x240 with a 320 KB heap, 10 to 20 times slower than the integer renderer, and leaves 54 to 63 KB, probably too little for the radio |
-| ESP32 (original, usually no PSRAM) | not measured | |
-| Headless boards | none | a terminal or serial front end is planned in Fusuma |
+| `fusuma-render-embedded` (integer) | fastest and lightest; 2 bytes per pixel, no floating point, no allocator | no anti-aliasing, no alpha |
+| `fusuma-render-skia` (`tiny-skia`) | anti-aliased and alpha; 4 bytes per pixel; about 3 to 4 times faster than Vello without a GPU | needs an allocator; a software float library on a chip with no FPU |
+| `fusuma-render-vello-cpu` | the richest (blur, layers, glyph runs, Lottie later); same engine as the GPU | slowest and heaviest on a small chip |
+| `fusuma-render-vello` (GPU) | for a desktop or phone with a usable GPU | needs `wgpu` and a GPU |
 
-What I measured on the S3 (240 MHz, 8 MB PSRAM): `vello_cpu` builds `no_std` with `libm` and runs. A
-full-screen launcher frame takes 267 ms through Fusuma's trait (the integer renderer took 61 ms), so slides
-need partial redraws. A demo that repaints only the touched card (41 ms to render, 11 ms to send) felt richer
-and more responsive on the real screen. Until Fusuma has dirty-rectangle redraws and the integer renderer is
-removed, the shipping launcher still uses the integer renderer and repaints the whole screen. The P4 is
-untested. Numbers: `tools/bench-s3/RESULT.md`, and for the C6 `tools/bench-c6/RESULT.md`.
+Defaults by hardware (a proposal, to be written into `board.toml`; none of it is automatic yet):
+
+| Board | Default | Also available |
+|---|---|---|
+| ESP32-S3 or P4 with PSRAM and a screen | `vello_cpu` with partial redraws | `tiny-skia`, integer |
+| ESP32-C6 and other chips without PSRAM | `tiny-skia`, or the integer renderer when the radio needs the RAM | `vello_cpu` for small surfaces |
+| Desktop or phone | `vello` (GPU) when `gpu_available()`, else `vello_cpu` | the rest |
+| Headless | none | a terminal front end (planned in Fusuma) |
+
+What I measured. On the ESP32-S3 (240 MHz, 8 MB PSRAM): `vello_cpu` is about 4 times slower than the integer
+renderer for a full frame (267 against 61 ms for 410x502) and needs about 1 MB; a demo that repainted only the
+touched card (41 ms to render) felt richer and more responsive on the real screen. On the ESP32-C6 (no PSRAM,
+no FPU, 320 KB heap): `tiny-skia` is 3 to 4 times faster than `vello_cpu` and lighter, and the integer
+renderer is 3 to 4 times faster again. Numbers: `tools/bench-s3/RESULT.md` and `tools/bench-c6/RESULT.md`.
+`tiny-skia` is not measured on the S3. The shipping launcher still uses the integer renderer and repaints the
+whole screen.
 
 A bug worth knowing: the CO5300 needs an explicit memory-write command after each address window. Without
 it a partial update lands in the wrong place and tears. Waveshare's own driver sends it; mine did not.

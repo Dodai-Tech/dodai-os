@@ -40,6 +40,7 @@ matters: each phase leaves something running on a real board. Status: `[x]` done
 
 - [ ] **ESP32-P4 7 inch panel:** a `board.toml`, a board crate and drivers; run the Vello benchmark on it (400 MHz, FPU, vector extension)
 - [x] **Measured Vello on an ESP32-C6** (`tools/bench-c6`, no screen needed): it runs up to about 240x240 on a 320 KB heap but is 10 to 20 times slower than the integer renderer and leaves 54 to 63 KB, so a C6 with a screen would have to give up the radio or use something lighter
+- [x] **Measured `tiny-skia` on the C6 too:** 3 to 4 times faster and lighter than Vello there; all three renderers are kept and a board picks a default by its hardware
 - [ ] **ESP32-C6 as a real board:** a `board.toml` for a specific board (the one tested is an unnamed 8 MB board), a terminal or serial front end for the headless case (a Fusuma platform crate), background services
 - [ ] **Host profiles from board files:** every real board's `board.toml` built into the host preview (the S3 is)
 - [ ] A JSON schema for `board.toml`, committed and checked
@@ -51,6 +52,18 @@ matters: each phase leaves something running on a real board. Status: `[x]` done
 - [ ] **Apps:** weather (`weathertrack-core`), clock, settings
 - [ ] **Dodai theming** through `dodai-fusuma` (in the design-system repository), once Fusuma has widgets
 - [ ] **Text:** the bitmap fonts stay on the chips; a better pixel font and a larger character set; Parley only on desktop and phone (see Fusuma's roadmap)
+
+## A flash and configuration wizard
+
+A terminal (and later graphical) wizard that flashes Hibari onto a board and lets the user choose what goes
+in, within the limits of the hardware. Nothing is written; what it needs first:
+
+- [ ] **Hardware limits in `board.toml`:** RAM and PSRAM size, flash size and partition layout, whether there is an FPU, the radio, the screen; so the wizard can tell what fits
+- [ ] **A cost for every option:** flash and RAM each feature costs (the renderer, the radio, a service, an app), measured, so the wizard can add them up and refuse what does not fit
+- [ ] **The choices:** renderer, features (WiFi, Bluetooth, storage), apps, theme; defaults from the board
+- [ ] **Backup, flash and restore:** back up what is on the board first (as `just backup` does), flash into an OTA slot next to the native firmware, and offer to restore
+- [ ] **Build or download:** build the chosen set from source, or fetch a prebuilt image for known combinations
+- [ ] A text-mode interface (ratatui) first, a graphical one later on Fusuma
 
 ## Maybe, if a need appears
 

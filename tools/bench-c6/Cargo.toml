@@ -16,6 +16,7 @@ test = false
 # Local paths: the no_std Vello backend is not released yet.
 fusuma-render = { path = "../../../../fusuma/crates/fusuma-render" }
 fusuma-render-embedded = { path = "../../../../fusuma/crates/fusuma-render-embedded" }
+fusuma-render-skia = { path = "../../../../fusuma/crates/fusuma-render-skia", default-features = false }
 fusuma-render-vello-cpu = { path = "../../../../fusuma/crates/fusuma-render-vello-cpu", default-features = false, features = ["libm"] }
 # Pinned: esp-hal 1.2 keeps a different app-descriptor section than esp-bootloader-esp-idf 0.4 writes, and
 # the image then has no descriptor and cannot be flashed. The S3 firmware is locked to 1.0.0 as well.
