@@ -44,7 +44,7 @@ The full plan, crate structure and decisions are in the Fusuma repository: `docs
 - [ ] `dodai-fusuma`: Dodai UI for Fusuma, as one more `dodai-<toolkit>` adapter, with a `ShaderView`
 - [ ] `fusuma-platform-mcu` (Hibari OS boards), `-desktop`, `-android`, `-ios`, `-tui`, and later `-web`
 - [ ] `dodai-fx`: its `Painter` trait overlaps the `Renderer` of `fusuma-render`; draw effects through it
-- [ ] Speed up the integer renderer on the S3: a full-screen frame takes 61 ms before the flush (the frame buffer is in slow PSRAM and a clear alone writes 412 KB), so a slide runs near 10 fps; options are redrawing only the strip that changed, filling spans instead of per-pixel writes, and keeping hot rows in internal RAM
+- [ ] Vello on the S3: tearing fix, a `no_std` Vello backend, partial redraws in the shell (see Fusuma's Phase 1b); the demo `hibari-os-s3-vello-demo` repaints only the touched card and felt richer and more responsive. The integer renderer stays for the C6 and as a fallback, and its full-screen frame takes 61 ms before the flush (the frame buffer is in slow PSRAM and a clear alone writes 412 KB), so a slide runs near 10 fps; options are redrawing only the strip that changed, filling spans instead of per-pixel writes, and keeping hot rows in internal RAM
 
 ## Phase 2: more boards
 - [ ] ESP32-P4 7" touch display (`riscv32imafc`, esp_hosted WiFi)

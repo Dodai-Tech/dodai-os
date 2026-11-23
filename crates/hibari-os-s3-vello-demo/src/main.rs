@@ -75,7 +75,10 @@ fn paint((r, g, b): (u8, u8, u8)) -> AlphaColor<vello_cpu::color::Srgb> {
 fn card(w: i32, h: i32, i: i32) -> (i32, i32, i32, i32) {
     let (col, row) = (i % COLS, i / COLS);
     let (x0, y0) = (col * w / COLS, BAR + row * (h - BAR) / ROWS);
-    let (cw, ch) = ((col + 1) * w / COLS - x0, BAR + (row + 1) * (h - BAR) / ROWS - y0);
+    let (cw, ch) = (
+        (col + 1) * w / COLS - x0,
+        BAR + (row + 1) * (h - BAR) / ROWS - y0,
+    );
     (x0 + MARGIN, y0 + MARGIN, cw - 2 * MARGIN, ch - 2 * MARGIN)
 }
 
@@ -107,7 +110,9 @@ fn draw_card(ctx: &mut RenderContext, w: i32, h: i32, i: i32, pressed: bool) {
     ctx.set_paint(paint((235, 238, 245)));
     ctx.stroke_path(&Circle::new((x + cw / 2.0, y + ch / 2.0 - 14.0), 33.0).to_path(0.1));
     ctx.set_paint(paint(hue));
-    ctx.stroke_path(&RoundedRect::new(x + 14.0, y + ch - 36.0, x + cw - 14.0, y + ch - 14.0, 9.0).to_path(0.1));
+    ctx.stroke_path(
+        &RoundedRect::new(x + 14.0, y + ch - 36.0, x + cw - 14.0, y + ch - 14.0, 9.0).to_path(0.1),
+    );
 }
 
 /// The status bar: a bar with a small ring and a pill, again to show smooth curves.
@@ -125,16 +130,39 @@ fn draw_bar(ctx: &mut RenderContext, w: i32) {
     ctx.stroke_path(&ring);
 }
 
+/// The smallest region that covers `(x, y, w, h)` with even edges, inside a `sw` x `sh` screen. The
+/// panel controller wants update windows that start and end on even pixels.
+fn even_region(x: i32, y: i32, w: i32, h: i32, sw: i32, sh: i32) -> (i32, i32, u16, u16) {
+    let (x0, y0) = ((x.max(0)) & !1, (y.max(0)) & !1);
+    let (x1, y1) = (
+        ((x + w + 1) & !1).min(sw & !1),
+        ((y + h + 1) & !1).min(sh & !1),
+    );
+    (x0, y0, (x1 - x0).max(2) as u16, (y1 - y0).max(2) as u16)
+}
+
 /// Renders `scene` into a region of `rw` x `rh` pixels whose top-left is at screen `(ox, oy)`, and
 /// sends it to the panel as RGB565.
-fn show<D: Display>(display: &mut D, ox: i32, oy: i32, rw: u16, rh: u16, scene: impl FnOnce(&mut RenderContext)) -> (u64, u64) {
+fn show<D: Display>(
+    display: &mut D,
+    ox: i32,
+    oy: i32,
+    rw: u16,
+    rh: u16,
+    scene: impl FnOnce(&mut RenderContext),
+) -> (u64, u64) {
     let t0 = micros();
     let mut ctx = RenderContext::new(rw, rh);
     let mut resources = Resources::new();
     let mut target = Pixmap::new(rw, rh);
     ctx.set_transform(Affine::translate((-f64::from(ox), -f64::from(oy))));
     ctx.set_paint(paint((8, 8, 16)));
-    ctx.fill_rect(&KRect::new(f64::from(ox), f64::from(oy), f64::from(ox) + f64::from(rw), f64::from(oy) + f64::from(rh)));
+    ctx.fill_rect(&KRect::new(
+        f64::from(ox),
+        f64::from(oy),
+        f64::from(ox) + f64::from(rw),
+        f64::from(oy) + f64::from(rh),
+    ));
     scene(&mut ctx);
     ctx.flush();
     ctx.render(&mut target, &mut resources);
@@ -142,9 +170,19 @@ fn show<D: Display>(display: &mut D, ox: i32, oy: i32, rw: u16, rh: u16, scene: 
     let pixels: Vec<u16> = target
         .data_as_u8_slice()
         .chunks_exact(4)
-        .map(|p| ((u16::from(p[0]) >> 3) << 11) | ((u16::from(p[1]) >> 2) << 5) | (u16::from(p[2]) >> 3))
+        .map(|p| {
+            ((u16::from(p[0]) >> 3) << 11) | ((u16::from(p[1]) >> 2) << 5) | (u16::from(p[2]) >> 3)
+        })
         .collect();
-    let _ = display.flush(Rect { x: ox as u16, y: oy as u16, w: rw, h: rh }, &pixels);
+    let _ = display.flush(
+        Rect {
+            x: ox as u16,
+            y: oy as u16,
+            w: rw,
+            h: rh,
+        },
+        &pixels,
+    );
     (t1 - t0, micros() - t1)
 }
 
@@ -158,11 +196,18 @@ fn main() -> ! {
 
     let delay = Delay::new();
     let (rx_buf, rx_desc, tx_buf, tx_desc) = dma_buffers!(qspi::DMA_CHUNK);
-    let (Ok(dma_rx), Ok(dma_tx)) = (DmaRxBuf::new(rx_desc, rx_buf), DmaTxBuf::new(tx_desc, tx_buf)) else {
+    let (Ok(dma_rx), Ok(dma_tx)) = (
+        DmaRxBuf::new(rx_desc, rx_buf),
+        DmaTxBuf::new(tx_desc, tx_buf),
+    ) else {
         panic!("DMA buffers");
     };
-    let spi_config = SpiConfig::default().with_frequency(Rate::from_mhz(board::LCD_QSPI_MHZ)).with_mode(SpiMode::_0);
-    let Ok(spi) = Spi::new(peripherals.SPI2, spi_config) else { panic!("SPI2") };
+    let spi_config = SpiConfig::default()
+        .with_frequency(Rate::from_mhz(board::LCD_QSPI_MHZ))
+        .with_mode(SpiMode::_0);
+    let Ok(spi) = Spi::new(peripherals.SPI2, spi_config) else {
+        panic!("SPI2")
+    };
     let spi = spi
         .with_sck(peripherals.GPIO11)
         .with_sio0(peripherals.GPIO4)
@@ -178,10 +223,15 @@ fn main() -> ! {
         panic!("display init");
     }
 
-    let Ok(i2c) = I2c::new(peripherals.I2C0, I2cConfig::default().with_frequency(Rate::from_khz(400))) else {
+    let Ok(i2c) = I2c::new(
+        peripherals.I2C0,
+        I2cConfig::default().with_frequency(Rate::from_khz(400)),
+    ) else {
         panic!("I2C0")
     };
-    let i2c = i2c.with_sda(peripherals.GPIO15).with_scl(peripherals.GPIO14);
+    let i2c = i2c
+        .with_sda(peripherals.GPIO15)
+        .with_scl(peripherals.GPIO14);
     let mut touch_reset = Output::new(peripherals.GPIO9, Level::High, OutputConfig::default());
     touch_reset.set_low();
     delay.delay_millis(10);
@@ -200,7 +250,10 @@ fn main() -> ! {
             draw_card(ctx, wi, hi, i, false);
         }
     });
-    log::info!("first frame {w}x{h}: render {render_us} us, convert and send {flush_us} us; free heap {} bytes", esp_alloc::HEAP.free());
+    log::info!(
+        "first frame {w}x{h}: render {render_us} us, convert and send {flush_us} us; free heap {} bytes",
+        esp_alloc::HEAP.free()
+    );
 
     let mut pressed: Option<i32> = None;
     loop {
@@ -214,8 +267,14 @@ fn main() -> ! {
                 for (i, is_pressed) in [(pressed, false), (target, true)] {
                     let Some(i) = i else { continue };
                     let (cx, cy, cw, ch) = card(wi, hi, i);
-                    let (render_us, flush_us) = show(&mut display, cx - 2, cy - 2, (cw + 4) as u16, (ch + 4) as u16, |ctx| draw_card(ctx, wi, hi, i, is_pressed));
-                    log::info!("card {i} {}: render {render_us} us, send {flush_us} us", if is_pressed { "pressed" } else { "released" });
+                    let (rx, ry, rw, rh) = even_region(cx - 2, cy - 2, cw + 4, ch + 4, wi, hi);
+                    let (render_us, flush_us) = show(&mut display, rx, ry, rw, rh, |ctx| {
+                        draw_card(ctx, wi, hi, i, is_pressed)
+                    });
+                    log::info!(
+                        "card {i} {}: render {render_us} us, send {flush_us} us",
+                        if is_pressed { "pressed" } else { "released" }
+                    );
                 }
                 pressed = target;
             }

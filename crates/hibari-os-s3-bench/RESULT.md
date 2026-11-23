@@ -18,4 +18,4 @@ both: a status bar, rounded cards with a disc and an outline each (no text). Ave
 * Not measured: text (the Vello path has no glyph call yet), the P4 (400 MHz, vector extension), and any
   SIMD (Vello's SIMD paths are not available for Xtensa, so this ran the scalar fallback).
 
-Conclusion: keep `fusuma-render-embedded` on the ESP32 series. See `docs/ROADMAP.md`.
+Conclusion for full frames: `vello_cpu` is slower. But a demo that repaints only the touched card (`hibari-os-s3-vello-demo`: 41 ms to render, 11 ms to send) felt richer and more responsive on the real screen, with smooth edges, so the preference is Vello on chips with PSRAM and partial redraws; the integer renderer stays for chips without PSRAM. See `docs/ROADMAP.md`.

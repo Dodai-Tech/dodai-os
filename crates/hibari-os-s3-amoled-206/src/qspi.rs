@@ -6,11 +6,11 @@
 
 use alloc::vec;
 use alloc::vec::Vec;
-use hibari_os_drivers::co5300::QspiBus;
 use esp_hal::Blocking;
 use esp_hal::gpio::Output;
 use esp_hal::spi::Error;
 use esp_hal::spi::master::{Address, Command, DataMode, SpiDmaBus};
+use hibari_os_drivers::co5300::QspiBus;
 
 /// Bytes per DMA transfer; the DMA buffer is this big.
 pub const DMA_CHUNK: usize = 8000;
@@ -29,7 +29,11 @@ pub struct Qspi<'d> {
 impl<'d> Qspi<'d> {
     /// Wraps an SPI bus and its chip-select pin.
     pub fn new(spi: SpiDmaBus<'d, Blocking>, cs: Output<'d>) -> Self {
-        Self { spi, cs, scratch: vec![0; DMA_CHUNK] }
+        Self {
+            spi,
+            cs,
+            scratch: vec![0; DMA_CHUNK],
+        }
     }
 }
 
@@ -68,7 +72,8 @@ impl QspiBus for Qspi<'_> {
                     data,
                 )
             } else {
-                self.spi.half_duplex_write(DataMode::Quad, Command::None, Address::None, 0, data)
+                self.spi
+                    .half_duplex_write(DataMode::Quad, Command::None, Address::None, 0, data)
             };
             if result.is_err() {
                 break;
