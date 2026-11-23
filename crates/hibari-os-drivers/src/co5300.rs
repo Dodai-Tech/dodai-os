@@ -11,6 +11,7 @@ const INVOFF: u8 = 0x20;
 const DISPON: u8 = 0x29;
 const CASET: u8 = 0x2A;
 const PASET: u8 = 0x2B;
+const RAMWR: u8 = 0x2C;
 const MADCTL: u8 = 0x36;
 const PIXFMT: u8 = 0x3A;
 const BRIGHTNESS: u8 = 0x51;
@@ -179,6 +180,9 @@ impl<B: QspiBus, RST: OutputPin, D: DelayNs> Display for Co5300<B, RST, D> {
             return Err(Error::BadArea);
         }
         self.set_window(area)?;
+        // Start a memory write at the window's corner. Without it the panel carries on from wherever
+        // the last write stopped, so a partial update lands in the wrong place or tears.
+        self.bus.write_reg(RAMWR, &[]).map_err(Error::Bus)?;
         self.bus.write_pixels(pixels).map_err(Error::Bus)
     }
 }
@@ -302,6 +306,9 @@ mod tests {
         let expected = vec![
             reg(0x2A, &[0, 32, 0, 35]),
             reg(0x2B, &[1, 44, 1, 45]),
+            // Regression: a memory write must be started after the window, or a partial update
+            // continues from where the last write stopped and tears.
+            reg(0x2C, &[]),
             Op::Pixels(8),
         ];
         assert_eq!(*log.0.borrow(), expected);
