@@ -74,18 +74,21 @@ security boundary.
 
 Everything draws through Fusuma's `Renderer` trait, so the choice of backend is one line per firmware.
 
-| Board | Renderer | Why |
+Rendering is always Vello: `vello_cpu` on every board, and the GPU backend on hardware that has a usable
+GPU (a desktop, not an ESP). There is no integer renderer in the plan.
+
+| Board | Renderer | Note |
 |---|---|---|
-| ESP32-S3, ESP32-P4 (PSRAM, a screen) | `vello_cpu`, with partial redraws | smooth anti-aliased edges and alpha; planned, see below |
-| Boards without PSRAM (ESP32-C6, ESP32) | Fusuma's integer renderer | no floating point, no allocator, a small frame buffer |
+| ESP32-S3, ESP32-P4 (PSRAM, a screen) | `vello_cpu`, with partial redraws | needs PSRAM: a full 410x502 frame is about 1 MB, a card-sized region 200 to 230 KB |
+| Boards without PSRAM (ESP32-C6, ESP32) | none | not supported for rendering, except possibly a very small display (unmeasured) |
 | Headless boards | none | a terminal or serial front end is planned in Fusuma |
 
-What I measured on the S3 (240 MHz, 8 MB PSRAM): `vello_cpu` builds with `libm` and no `std` and draws the
-same picture as the integer renderer, but a full-screen launcher frame takes 261 ms against 61 ms and needs
-1.4 MB. Full frames are not how a good UI updates. A demo that repaints only the touched card (41 ms to
-render, 11 ms to send) felt richer and more responsive on the real screen, so the plan is Vello with partial
-redraws. The shipping launcher still uses the integer renderer, and still repaints the whole screen. The
-P4 is untested. The numbers are in `tools/bench-s3/RESULT.md`.
+What I measured on the S3 (240 MHz, 8 MB PSRAM): `vello_cpu` builds `no_std` with `libm` and runs. A
+full-screen launcher frame takes 267 ms through Fusuma's trait (the integer renderer took 61 ms), so slides
+need partial redraws. A demo that repaints only the touched card (41 ms to render, 11 ms to send) felt richer
+and more responsive on the real screen. Until Fusuma has dirty-rectangle redraws and the integer renderer is
+removed, the shipping launcher still uses the integer renderer and repaints the whole screen. The P4 is
+untested. Numbers: `tools/bench-s3/RESULT.md`.
 
 A bug worth knowing: the CO5300 needs an explicit memory-write command after each address window. Without
 it a partial update lands in the wrong place and tears. Waveshare's own driver sends it; mine did not.
