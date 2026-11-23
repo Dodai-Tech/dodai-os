@@ -251,8 +251,42 @@ fn main() -> ! {
     );
 
     let mut pressed: Option<i32> = None;
+    // Touch health: swallowing errors made a stuck bus look like "touch stopped for no reason".
+    let (mut polls, mut errors, mut in_a_row, mut events) = (0u32, 0u32, 0u32, 0u32);
+    let mut last_report = BootClock.now_ms();
     loop {
-        if let Ok(Some(event)) = touch.poll() {
+        polls += 1;
+        let polled = touch.poll();
+        match &polled {
+            Ok(Some(_)) => {
+                events += 1;
+                in_a_row = 0;
+            }
+            Ok(None) => in_a_row = 0,
+            Err(e) => {
+                errors += 1;
+                in_a_row += 1;
+                if errors <= 5 || errors % 200 == 0 {
+                    log::warn!("touch poll failed ({errors} so far, {in_a_row} in a row): {e:?}");
+                }
+                if in_a_row == 25 {
+                    // The bus is stuck: reset the controller and set it up again.
+                    log::warn!("touch: resetting the controller after {in_a_row} failures in a row");
+                    touch_reset.set_low();
+                    delay.delay_millis(10);
+                    touch_reset.set_high();
+                    delay.delay_millis(60);
+                    log::info!("touch re-init: {:?}", touch.init());
+                    in_a_row = 0;
+                }
+            }
+        }
+        let now = BootClock.now_ms();
+        if now.wrapping_sub(last_report) >= 10_000 {
+            log::info!("touch: {polls} polls, {events} events, {errors} errors in the last 10 s");
+            (polls, events, errors, last_report) = (0, 0, 0, now);
+        }
+        if let Ok(Some(event)) = polled {
             let (x, y) = (i32::from(event.point.x), i32::from(event.point.y));
             let target = match event.phase {
                 Phase::Up => None,
@@ -267,8 +301,10 @@ fn main() -> ! {
                         draw_card(ctx, wi, hi, i, is_pressed)
                     });
                     log::info!(
-                        "card {i} {}: render {render_us} us, send {flush_us} us",
-                        if is_pressed { "pressed" } else { "released" }
+                        "card {i} {}: render {render_us} us, send {flush_us} us; heap free {} used {}",
+                        if is_pressed { "pressed" } else { "released" },
+                        esp_alloc::HEAP.free(),
+                        esp_alloc::HEAP.used()
                     );
                 }
                 pressed = target;
