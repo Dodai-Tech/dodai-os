@@ -1,96 +1,65 @@
 # Roadmap
 
-Order matters: each phase leaves something running on a real device or in a window. Details
-of the design are in [ARCHITECTURE.md](ARCHITECTURE.md). Status: `[x]` done, `[ ]` planned.
+Hibari OS is a thin operating system for ESP32 boards (see [ARCHITECTURE.md](ARCHITECTURE.md)). Order
+matters: each phase leaves something running on a real board. Status: `[x]` done, `[ ]` planned.
 
-## Phase 0: foundation
-- [x] Repo, CI, release tooling (GitHub, Gitea, Codeberg), nushell scripts
-- [x] `hibari-os-core` (`no_std`): capabilities, touch gestures, `App` contract
-- [x] `hibari-os-hal` (`no_std`): display, touch, backlight, clock, board traits
-- [x] Architecture document, backup of the S3 board's native firmware
-- [x] `hibari-os-kernel` (`no_std`, no `unsafe`): static cooperative scheduler, message queues, capability table with delegation, fuzzed
-- [x] `hibari-os-shell-model` (`no_std`): launcher paging, hit testing, navigation, shared with Kawara
-- [x] `hibari-os-host`: device profiles (S3 AMOLED, round watch, P4 7in, headless, desktop), host clock and framebuffer display
+## Done
 
-## Phase 1: first device, hosted preview (ESP32-S3 AMOLED 2.06)
-- [x] `hibari-os-shell`: launcher grid, status bar and app page drawn with `embedded-graphics` (`no_std`), adapts to screen size
-- [x] `hibari-os-host`: `--png` screenshots with `--tap`, and a `window` feature (minifb, mouse as touch)
-- [ ] Theme from `dodai-core` tokens instead of the built-in dark colors
-- [ ] Status bar content (time, WiFi, battery) and a swipe-down quick settings panel
-- [ ] Round-screen layout (clip the grid to the circle on `Shape::Round`)
-- [ ] Optional Slint view for rich UIs (Slint is GPL or commercial, so it stays opt-in, never the default)
-- [ ] Run apps as kernel tasks: shell and apps talk to services by message over `hibari-os-kernel`
-- [x] `hibari-os-drivers` (`no_std`, embedded-hal, host-tested with fake buses): CO5300 AMOLED and FT3168 touch
-- [ ] Drivers: AXP2101 power, PCF85063 RTC, QMI8658 IMU
-- [x] `hibari-os-s3-amoled-206` on `esp-hal` (`no_std`, no ESP-IDF): QSPI bus with DMA, I2C, pins, framebuffer in PSRAM
-- [x] Firmware boots from an OTA slot next to the native firmware (`just native-install`, `just native-restore`)
-- [ ] Confirm on the screen: launcher drawn correctly, taps and swipes work, even-aligned windows not needed
-- [ ] Apps: weather (`weathertrack-core`), clock, settings (WiFi, brightness, time, about)
-- [ ] Settings: Bluetooth, OTA updates, sleep and wake, battery
+- [x] Repo, CI on GitHub, Gitea and Codeberg, Nushell scripts, fuzzing
+- [x] `hibari-device`: capabilities, screen and firmware settings, loaded from `board.toml` (`toml` feature) and written out as constants for the firmware
+- [x] `hibari-hal`: `Display`, `Touch`, `Backlight`, `Clock`; touch events and a gesture recogniser
+- [x] `hibari-drivers`: CO5300 AMOLED (QSPI) and FT3168 touch, tested with fake buses
+- [x] `hibari-launcher`: app manifest and `runnable`, paging and hit testing, an interim view through Fusuma (status bar, grid, 220 ms cubic slide transitions), a frame buffer that tracks changed rows
+- [x] `hibari-host`: the launcher on a desktop, with device files, PNG screenshots (`--tap`, `--at`, `--renderer embedded|vello-cpu`) and a window
+- [x] `boards/s3-amoled-206`: firmware on `esp-hal` (no ESP-IDF), installed in OTA slot 0 next to the native firmware, with `just native-install` and `just native-restore`; the profile comes from `board.toml`
+- [x] The CO5300 memory-write fix: partial updates tore without an explicit write command after each window
+- [x] Measured `vello_cpu` on the S3 (`tools/bench-s3`) and a touch demo that repaints only the touched card (`tools/vello-demo-s3`)
+- [x] Fusuma 0.2 (renderers, animation) published and used here
 
-## Toolkit track: Fusuma (renderer, animation and toolkit)
-The full plan, crate structure and decisions are in the Fusuma repository: `docs/ROADMAP.md`.
-- [x] Fusuma repo (`~/Projects/fusuma`): `fusuma-render` (the `Renderer` trait), `fusuma-render-embedded` (integer, `no_std`), `fusuma-render-vello-cpu` and `-vello-common` (`vello_cpu`), a shared conformance suite, fuzzed
-- [x] `fusuma-anim`: easing, tweens, keyframes, springs and fling decay in fixed point (`no_std`)
-- [x] `hibari-os-shell` draws through `fusuma-render`'s `Renderer`: the S3 uses the integer backend, the host can use the anti-aliased one
-- [x] Time-driven transitions in the shell (220 ms cubic ease-out)
-- [x] Fusuma 0.2.0 published (`fusuma-render`, `-embedded`, `-vello-common`, `-vello-cpu`, `-vello`, `fusuma-anim`); the host's `--renderer` is now `embedded` or `vello-cpu` (`fusuma-render-skia` 0.1.0 stays on crates.io, unmaintained)
-- [ ] Host: `--renderer vello-gpu` behind a `gpu` feature, using `fusuma-render-vello`
-- [x] `hibari-os-core` re-exports `fusuma-anim`; its own animation module is gone and the shell uses `fusuma-anim`'s `Tween` and `Easing`
-- [ ] Spring-driven transitions: a spring needs per-frame state (stepped with the frame time), so `Ui::draw` stops being a pure function of the clock; design that together with the Fusuma animator, and with drag-to-swipe so a finger can pull a page
-- [x] `fusuma-render-vello` (GPU backend) exists and passes the conformance suite; effects (shadow, blur, gradients) and shaders come next as optional capabilities, and the shader engine reuses `dodai-shaders`
-- [x] Measured `vello_cpu` on the S3 (`crates/hibari-os-s3-bench`): about 4x slower than the integer renderer (261 ms against 61 ms for a full-screen launcher frame, 68 against 14 ms for a 410x120 strip) and 1.4 MB; it works, but the ESP keeps the integer renderer. Open: the P4, and text
-- [ ] Fusuma toolkit: widget tree, `taffy` layout, events, text, widgets; rebuild the launcher and settings on them
-- [ ] `dodai-fusuma`: Dodai UI for Fusuma, as one more `dodai-<toolkit>` adapter, with a `ShaderView`
-- [ ] `fusuma-platform-mcu` (Hibari OS boards), `-desktop`, `-android`, `-ios`, `-tui`, and later `-web`
-- [ ] `dodai-fx`: its `Painter` trait overlaps the `Renderer` of `fusuma-render`; draw effects through it
-- [ ] Vello on the S3: tearing fix, a `no_std` Vello backend, partial redraws in the shell (see Fusuma's Phase 1b); the demo `hibari-os-s3-vello-demo` repaints only the touched card and felt richer and more responsive. The integer renderer stays for the C6 and as a fallback, and its full-screen frame takes 61 ms before the flush (the frame buffer is in slow PSRAM and a clear alone writes 412 KB), so a slide runs near 10 fps; options are redrawing only the strip that changed, filling spans instead of per-pixel writes, and keeping hot rows in internal RAM
+## Phase 1: make the S3 board a device
 
-## Phase 2: more boards
-- [ ] ESP32-P4 7" touch display (`riscv32imafc`, esp_hosted WiFi)
-- [ ] ESP32-C6, headless: console shell and background services
-- [ ] Board profiles in TOML; the launcher lists only apps a board can run
+- [ ] **Vello on the S3 in the launcher:** needs a `no_std` Vello backend in Fusuma and dirty-rectangle redraws in the launcher (Fusuma's Phase 1b); the integer renderer repaints the whole screen in 61 ms, so slides run near 10 fps
+- [ ] **Verify on the screen:** swipes, page changes and app open and close, now that partial updates are fixed; the frame rate of a slide is unmeasured
+- [ ] **Drivers:** PCF85063 RTC, QMI8658 IMU, AXP2101 power and battery, the two buttons
+- [ ] **Status bar with real data:** time, battery, charging, later WiFi
+- [ ] **HAL traits** for each of those, and the decision on async (display and touch stay blocking unless a reason appears)
+- [ ] **Measure memory:** free internal RAM, free PSRAM, stack high-water mark and image size, printed by the running firmware, then again with the radio on
+- [ ] **Storage and settings:** a Hibari partition layout on the 32 MB flash and a key-value store (`sequential-storage`) that survives a reboot
 
-## Phase 3: native kernel (standalone), RISC-V ESPs first
-- [x] `hibari-os-kernel` stage 1: cooperative scheduler, IPC, capabilities (host-testable)
-- [ ] Kernel stage 2: timers, preemptive threads and per-task stacks behind the `Port` trait
-- [ ] `hibari-os-port-riscv32` (excluded crate, `unsafe` with safety comments): context switch, traps, PMP
-- [ ] QEMU RISC-V port in CI with a hello-world service
-- [ ] `esp-hal` + `esp-wifi` backend on the C6 and P4, replacing ESP-IDF
-- [ ] Xtensa port (S3) and Cortex-M port (RP2350, nRF52, STM32)
-- [ ] Isolation with PMP and MPU where the hardware has it
+## Phase 2: connectivity
 
-## Phase 4: desktop, SBC and x86
-- [ ] Hosted on Linux, macOS and Windows (x86 and ARM) as a product, not only a preview
-- [ ] Standalone on Raspberry Pi and QEMU ARM (`virt`)
-- [ ] Standalone on x86_64 (QEMU `q35`): UEFI framebuffer, VirtIO, then real PCs
+- [ ] **Runtime:** `esp-rtos` and Embassy under the firmware loop (the radio needs them, as I understand it)
+- [ ] **WiFi** with `esp-radio` (a beta): scan, connect, credentials in storage, an NTP clock
+- [ ] **A `hibari-services` crate** when the first service exists: network, storage and time as async tasks with typed messages
+- [ ] **Settings app:** WiFi, brightness, time zone, about
+- [ ] **Bluetooth** with `trouble-host`: advertising and pairing first, then something useful such as phone notifications
+- [ ] **OTA updates** of Hibari itself, signed
+- [ ] **Sleep, wake and battery behaviour**
 
-### Kawara track (the Dodai desktop environment, parallel to phase 4)
-- [x] `hibari-os-shell` split into `hibari-os-shell-model` (pure logic) and the view
-- [ ] Rename the shared model to a neutral `shell-model` when Kawara starts to use it
-- [ ] Wayland compositor prototype (Smithay), panel and launcher on the shell model
-- [ ] Session that starts from a display manager; settings app shared with Hibari OS
-- [ ] Own repos: `kawara`; `hibari-os` keeps only the portable crates
+## Phase 3: more boards
 
-### Noren (the app store)
-- [ ] Catalogue and install logic, with a Fusuma front end; backends as separate crates (`noren-flatpak`, `noren-pacman`)
-- [ ] Research: apps for Hibari OS on microcontrollers (signed OTA images or sandboxed WebAssembly modules); apps are compiled in today
-- [ ] Open: publishing and review, signing, who may submit, paid apps
+- [ ] **ESP32-P4 7 inch panel:** a `board.toml`, a board crate and drivers; run the Vello benchmark on it (400 MHz, FPU, vector extension)
+- [ ] **ESP32-C6, headless and small displays:** a `board.toml` without a screen, a terminal or serial front end (a Fusuma platform crate), background services; a small colour LCD works with the integer renderer
+- [ ] **Host profiles from board files:** every real board's `board.toml` built into the host preview (the S3 is)
+- [ ] A JSON schema for `board.toml`, committed and checked
 
-### Dodai Linux (Arch-based)
-- [ ] `archiso` image that boots into Kawara, built by a nightly in CI
-- [ ] PKGBUILD repo and `pacman` repository for Kawara and the shared apps
-- [ ] First-boot setup and installer
-- [ ] Own repo: `dodai-linux`
+## Phase 4: apps and the toolkit
 
-## Phase 5: phones and wearables
-- [ ] Hosted on Android and iOS as an app
-- [ ] Pick the first phone: the best-supported unlocked device in the owner's collection
-      (probe with `adb` and `fastboot`; check the postmarketOS device tier)
-- [ ] Linux mode: Hibari as the userspace shell on that phone's kernel
-- [ ] Standalone own kernel on that phone: display, touch and storage first, radio later
-- [ ] Wearables: open or unlockable watches (Pine Time, Bangle.js and similar)
+- [ ] **The launcher on Fusuma widgets,** replacing the interim view; gestures move into Fusuma
+- [ ] **The app model,** designed from the first real app: probably a Fusuma tree plus a manifest and a lifecycle
+- [ ] **Apps:** weather (`weathertrack-core`), clock, settings
+- [ ] **Dodai theming** through `dodai-fusuma` (in the design-system repository), once Fusuma has widgets
+- [ ] **Text:** the bitmap fonts stay on the chips; a better pixel font and a larger character set; Parley only on desktop and phone (see Fusuma's roadmap)
 
-## Out of scope
-- iPhone, Apple Watch and other locked devices
-- Writing GPU, modem or Wi-Fi firmware: closed vendor blobs are linked or hosted, not rewritten
+## Maybe, if a need appears
+
+- [ ] A preemptive scheduler and memory-protection isolation (`experiments/kernel` is the start); only on a chip with a real MPU, and only if apps are ever loaded rather than compiled in
+- [ ] Apps as sandboxed WebAssembly modules (`wasmi`), which would need a store and signing
+- [ ] Other chip families (RP2350, nRF52, STM32) through Embassy
+- [ ] An ESP32-S3 benchmark of Vello with text, once Fusuma has a glyph call
+
+## Not part of Hibari OS
+
+The Kawara desktop environment, the Noren app store and the Dodai Linux distribution were ideas for the
+family; none has code. A phone or desktop product would be its own repository and would use Fusuma, not
+this OS.

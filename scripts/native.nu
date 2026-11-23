@@ -20,16 +20,29 @@ use esp.nu [parse_ptable]
 
 const ROOT = path self ..
 
-# One record per board: name, crate, chip, target, flash_mb.
-export const BOARDS = [[name, crate, chip, target, flash_mb]; ["s3-amoled-206", "hibari-os-s3-amoled-206", "esp32s3", "xtensa-esp32s3-none-elf", 32] ["s3-bench", "hibari-os-s3-bench", "esp32s3", "xtensa-esp32s3-none-elf", 32] ["s3-vello-demo", "hibari-os-s3-vello-demo", "esp32s3", "xtensa-esp32s3-none-elf", 32]]
+# What can be built for an ESP32 with esp-hal: name, directory, crate, and the directory whose `board.toml`
+# describes the device it runs on (chip, target and flash size are read from its [firmware] table).
+export const BOARDS = [[name, dir, crate, device]; ["s3-amoled-206", "boards/s3-amoled-206", "hibari-board-s3-amoled-206", "boards/s3-amoled-206"] ["s3-bench", "tools/bench-s3", "hibari-bench-s3", "boards/s3-amoled-206"] ["s3-vello-demo", "tools/vello-demo-s3", "hibari-demo-s3-vello", "boards/s3-amoled-206"]]
 
 # ── Pure helpers ──────────────────────────────────────────────────────────────
 
-# A board record by name; error listing the known ones.
+# The `chip`, `target` and `flash_mb` of the [firmware] table of a `board.toml`.
+export def firmware_of [toml: path]: nothing -> record {
+    if not ($toml | path exists) { error make { msg: $"($toml) does not exist" } }
+    let fw = open $toml | get -o firmware
+    if $fw == null { error make { msg: $"($toml) has no [firmware] table" } }
+    for key in [chip target flash_mb] {
+        if ($fw | get -o $key) == null { error make { msg: $"($toml): [firmware] has no '($key)'" } }
+    }
+    { chip: $fw.chip, target: $fw.target, flash_mb: $fw.flash_mb }
+}
+
+# A board record by name, with the firmware settings of its device file; error listing the known ones.
 export def board [name: string]: nothing -> record {
     let r = $BOARDS | where name == $name
     if ($r | is-empty) { error make { msg: $"unknown board '($name)'; one of: ($BOARDS.name | str join ', ')" } }
-    $r | first
+    let b = $r | first
+    $b | merge (firmware_of ($ROOT | path join $b.device board.toml))
 }
 
 # CRC-32 (IEEE) of `data` with the ROM's calling convention: `init` is the "previous result", 0 for a
@@ -100,7 +113,7 @@ def port_args [port: string]: nothing -> list<string> {
     if ($port | is-empty) { [] } else { ["--port" $port] }
 }
 
-def crate_dir [b: record]: nothing -> path { $ROOT | path join crates $b.crate }
+def crate_dir [b: record]: nothing -> path { $ROOT | path join $b.dir }
 
 def elf_path [b: record]: nothing -> path { crate_dir $b | path join target $b.target release $b.crate }
 

@@ -33,12 +33,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1c66915cc5391097de7a2b0b972e8505aa33c0df401fd3a6811dbdb32881ba48"
 
 [[package]]
-name = "fusuma-anim"
-version = "0.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9893b7f09c2802ced351fcf96bd862aca55635499ed321423284520414e4cb9b"
-
-[[package]]
 name = "getrandom"
 version = "0.4.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -50,26 +44,31 @@ dependencies = [
 ]
 
 [[package]]
-name = "hibari-os-core"
+name = "hibari-device"
+version = "0.1.0"
+
+[[package]]
+name = "hibari-hal"
 version = "0.1.0"
 dependencies = [
- "fusuma-anim",
+ "hibari-device",
 ]
 
 [[package]]
-name = "hibari-os-core-fuzz"
+name = "hibari-kernel"
+version = "0.1.0"
+dependencies = [
+ "hibari-device",
+]
+
+[[package]]
+name = "hibari-os-fuzz"
 version = "0.0.0"
 dependencies = [
- "hibari-os-core",
- "hibari-os-kernel",
+ "hibari-device",
+ "hibari-hal",
+ "hibari-kernel",
  "libfuzzer-sys",
-]
-
-[[package]]
-name = "hibari-os-kernel"
-version = "0.1.0"
-dependencies = [
- "hibari-os-core",
 ]
 
 [[package]]

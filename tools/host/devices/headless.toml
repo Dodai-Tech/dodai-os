@@ -1,0 +1,3 @@
+# A board without a screen (an ESP32-C6 sensor, for example). A simulated device for the host preview.
+name = "headless"
+capabilities = ["wifi", "led", "storage"]

@@ -1,0 +1,39 @@
+[package]
+name = "hibari-host"
+description = "Runs the Hibari OS launcher on a desktop for development: device files, screenshots and a window (not published)"
+readme = "README.md"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+keywords.workspace = true
+categories.workspace = true
+authors.workspace = true
+repository.workspace = true
+publish = false
+
+[lib]
+name = "hibari_host"
+path = "src/lib.rs"
+
+[features]
+# A real window (minifb): mouse as touch. Off by default so CI needs no display libraries.
+window = ["dep:minifb"]
+
+[dependencies]
+hibari-device = { workspace = true, features = ["toml"] }
+hibari-hal.workspace = true
+hibari-launcher.workspace = true
+embedded-graphics.workspace = true
+fusuma-render.workspace = true
+fusuma-render-embedded.workspace = true
+fusuma-render-vello-cpu.workspace = true
+png.workspace = true
+minifb = { workspace = true, optional = true }
+
+[lints]
+workspace = true
+
+[[bin]]
+name = "hibari-host"
+path = "src/main.rs"

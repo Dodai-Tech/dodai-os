@@ -17,3 +17,6 @@ backups/
 
 # Firmware crates are separate cargo projects with their own target dir
 crates/*/target/
+boards/*/target/
+tools/*/target/
+experiments/*/target/

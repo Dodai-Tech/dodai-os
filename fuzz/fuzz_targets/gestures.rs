@@ -1,7 +1,7 @@
 #![no_main]
 //! Random touch streams never panic, and after an `Up` the recognizer is idle.
 
-use hibari_os_core::{GestureRecognizer, Phase, Point, TouchEvent};
+use hibari_hal::input::{GestureRecognizer, Phase, Point, TouchEvent};
 use libfuzzer_sys::fuzz_target;
 
 fuzz_target!(|data: &[u8]| {

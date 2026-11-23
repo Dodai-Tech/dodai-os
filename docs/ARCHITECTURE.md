@@ -1,174 +1,135 @@
 # Hibari OS architecture
 
-Hibari OS (土台, "foundation") is a small, efficient app platform for microcontroller boards:
-RISC-V first (ESP32-C6, P4), then Xtensa (ESP32-S3), ARM Cortex-M and, experimentally, x86.
-The goal is a microkernel with user-level services. We get there in stages, so there is always
-something running on a real board.
+Hibari OS is a thin operating system for ESP32 boards, written in Rust on `esp-hal`, with no ESP-IDF.
+It is a platform, not a kernel: a hardware layer, drivers, a launcher and an app model, running on the
+runtime that Espressif's own radio libraries need. The goal is a small footprint and a good, smooth
+interface on a board with a screen. It is part of the Dodai family (see the end).
 
-## Layers
+## What it is not, and why
+
+* **Not a microkernel.** I built a cooperative scheduler (`experiments/kernel`) and nothing uses it,
+  because a kernel buys nothing on these chips. The ESP32-S3 has no memory protection and the C6 only a
+  basic one, so there is nothing to isolate; apps are compiled into one firmware image. And WiFi and
+  Bluetooth sit on Espressif's closed libraries, which (as I understand it) run on `esp-rtos`, so Hibari
+  would not own the scheduler on the radio chips anyway.
+* **Not for any hardware.** It targets the ESP32 series. Other chip families are possible later through
+  Embassy, but nothing here is written for them.
+* **Not a toolkit.** Drawing and widgets are [Fusuma](https://github.com/Dodai-Tech/fusuma); the launcher
+  view in this repository is an interim stand-in for Fusuma widgets.
+
+## Layout
 
 ```
-apps         weather, settings, clock ...      unprivileged state machines
-shell        launcher, status bar, navigation  draws with dodai-core tokens
-services     net, storage, ui, power           user-level servers, talk by IPC
-kernel       scheduler, IPC, capabilities      tiny, static, no allocation
-ports        riscv32, xtensa, cortex-m, x86_64 context switch, traps, MPU/PMP
-backends     esp-idf (now), native no_std      implement the HAL traits
-boards       one crate per device              pins, drivers, capability list
+crates/                      the libraries, all no_std
+  hibari-device              what a device is
+  hibari-hal                 device traits, touch input and gestures
+  hibari-drivers             chip drivers
+  hibari-launcher            app manifest, paging and navigation, interim view, frame buffer
+boards/<board>/              board.toml, the board library and its firmware (esp-hal); not published
+tools/                       host preview, benchmark and demo firmware; not published
+experiments/kernel           the unused scheduler
 ```
 
-Apps never touch a backend. They see events in and effects out (`hibari-os-core`), and reach
-hardware only through capabilities the shell grants.
+Dependencies point one way:
 
-## Crates
+```
+hibari-device            (no dependencies)
+   ↑
+hibari-hal               device traits; input events and gestures
+   ↑            ↑
+hibari-drivers  hibari-launcher ──→ fusuma-render, fusuma-anim
+   ↑                  ↑
+   └──── boards/*, tools/host
+```
 
-| Crate | Role | `no_std` |
-|---|---|---|
-| `hibari-os-core` | capabilities, touch gestures, the `App` contract | yes |
-| `hibari-os-hal` | `Display`, `Touch`, `Backlight`, `Clock`, `Board` traits | yes |
-| `hibari-os-shell-model` | launcher paging, hit testing, navigation (no UI toolkit) | yes |
-| `hibari-os-shell` | view: status bar, app grid, app page, drawn with `embedded-graphics` on any RGB565 target | yes |
-| `hibari-os-kernel` | cooperative scheduler, message queues, capability table | yes |
-| `hibari-os-host` | hosted backend: device profiles, host clock and display | no |
-| `hibari-os-port-<arch>` (planned) | architecture-specific code | yes |
-| `hibari-os-<chip>` | firmware (ESP-IDF today), excluded from the workspace | no |
-| `hibari-os-board-<name>` (planned) | one device: pins, drivers, capabilities | yes |
+The libraries are `no_std` and need no allocator. A board crate wires drivers to pins and runs the loop;
+it is the only place that knows the chip.
 
-Design tokens and themes come from `dodai-core` (in the `dodai-ui` repository); OS crates are
-`hibari-os-*`, so the names never collide.
+## A device is a file
 
-## Products
+Each device has one description, `board.toml`: its name, its screen (size, shape, the panel's memory
+offset), its capabilities and, for a real board, how to build and flash it (chip, target, flash size).
 
-| Product | What it is | Built on |
-|---|---|---|
-| **Hibari OS** | Own microkernel and app platform, staged by hardware: RISC-V ESPs first, then Xtensa, ARM, x86, open or unlockable phones, tablets and watches | own kernel (ESP-IDF while bootstrapping) |
-| **Kawara** (the Dodai desktop environment) | Desktop and mobile shell in Rust: Wayland compositor, panel, launcher, settings | Linux (probably Smithay) |
-| **Dodai Linux** | Arch-based distribution that ships Kawara: installer, package repo, `archiso` images | Arch Linux |
+* **The firmware** gets a `const PROFILE` generated from it by `build.rs` (through `hibari-device`'s
+  `toml` feature), so the capability list and the screen size are written once. The display driver takes
+  its size and offset from the same `DisplayInfo`.
+* **The host preview** loads the same file for the real board, plus simulated devices in
+  `tools/host/devices/` (a round watch, the P4 panel, a headless board, a desktop window).
+* **`scripts/native.nu`** reads chip, target and flash size from its `[firmware]` table.
 
-Shared by all three: `dodai-core` and `dodai-ui` (tokens, themes, widgets), `hibari-os-core`
-(`no_std`: capabilities, gestures, the `App` contract), the shell model (launcher, navigation,
-settings pages, notifications; UI-toolkit independent) and the apps. Not shared: the HAL
-(devices only; the DE gets input and display from libinput, DRM and Wayland), the kernel, ports
-and board crates (Hibari OS only), the compositor, session, packaging and installer (DE and Linux).
+Unknown fields and capabilities are errors with a message, and a profile is validated (a screen and the
+`display` capability go together; a touch panel needs a screen). Not done: a committed JSON schema, and
+pins in the file (esp-hal wants one typed handle per pin, so they stay in the board's source).
 
-Rule: a shared crate has no platform dependency. Each product supplies a thin adapter.
-"Any hardware" means any hardware that has a port and drivers: per device, not automatic.
-Desktop-class hardware (GPU, Wi-Fi, USB, audio) is the long tail for the native kernel, so
-Dodai Linux covers desktops and laptops first.
-
-## The Dodai family
-
-Names follow a Japanese house. Dodai (土台, foundation) is the family and the design system; Hibari (雲雀, skylark) is the thin operating system for ESP32 boards, and each layer above has its own
-name, so each can be used without the others.
-
-| House part | Product | Name | Notes |
-|---|---|---|---|
-| Foundation 土台 | OS with its own microkernel | **Hibari OS** (`hibari-os-*`) | this repo |
-| Sliding doors 襖 | UI toolkit and its renderer | **Fusuma** | OS-agnostic. Renderer: `fusuma-render` (the trait), `-embedded` (microcontrollers), `-vello-cpu` and later `-vello` (GPU); animation: `fusuma-anim`; widgets, layout, text, effects and shaders (`fusuma-*`) are planned. One repo, `fusuma`; apps depend on one `fusuma` crate and the backend is chosen by target. See its `docs/ROADMAP.md`. |
-| Finish | design system | **Dodai UI** (`dodai-*`) | tokens, four designs, one adapter crate per toolkit, including `dodai-fusuma` |
-| Roof tiles 瓦 | desktop and mobile environment | **Kawara** | Linux, Wayland. Planned. |
-| Shop curtain 暖簾 | app store | **Noren** | front end over Flatpak and pacman; a store for Hibari OS is research. Planned. |
-| The house | Arch-based distribution | **Dodai Linux** | ships Kawara and Noren. Planned. |
-
-Dependencies point one way: Hibari OS and Kawara use Fusuma, the toolkit crates use `fusuma-render`, and
-`fusuma-render*` knows nothing above it; a CI rule in the Fusuma repo enforces that. `dodai-fusuma` uses Fusuma and the design tokens; Fusuma never imports
-`dodai-*`.
-
-Naming rules:
-* Design system (repository `dodai-ui`): `dodai-<toolkit>` is an adapter (`dodai-slint`, `dodai-iced`,
-  `dodai-fusuma`); `dodai-<capability>` is toolkit-neutral (`dodai-core`, `dodai-icons`, `dodai-shaders`).
-* `hibari-os-<role>` is the OS; `-core` means the portable, UI-free heart of that product.
-* Logic shared by Hibari OS and Kawara (the launcher model) gets a neutral name when Kawara starts
-  (`hibari-os-shell-model` becomes a neutral `shell-model`), so neither product depends on the other.
-
-## Rendering and platforms: native Rust, no web technology
-
-Everything draws through `fusuma-render`:
-
-| Situation | Backend |
-|---|---|
-| Microcontroller with a pixel display | `fusuma-render-embedded` (our integer rasteriser, `no_std`) |
-| Desktop, phone, watch, with a GPU | `fusuma-render-vello` (`vello_gpu`), planned |
-| The same without a usable GPU; screenshots and tests | `fusuma-render-vello-cpu` (`vello_cpu`) |
-| Terminal, serial console, character displays | `fusuma-platform-tui`, planned: a semantic front end on ratatui, not a pixel backend |
-
-The two Vello backends share one implementation of the `Renderer` trait. There is no webview, HTML
-or CSS in Fusuma, and the C++ Skia is not used (the `tiny-skia` backend was dropped). Animation
-(easing, tweens, keyframes, springs, fling decay) is built in as `fusuma-anim`, in fixed-point maths
-so that it runs the same without an FPU. Effects (shadow, blur, gradients) and shaders are optional
-capabilities that a backend reports; widgets fall back to a plain fill without them.
-
-Fusuma reaches each target through a small platform crate:
-
-| Crate | Target | Notes |
-|---|---|---|
-| `fusuma-platform-mcu` | microcontroller displays | display and touch drivers, as in Hibari OS today |
-| `fusuma-platform-desktop` | Linux, macOS, Windows | `winit` window, pixel buffer or GPU surface |
-| `fusuma-platform-android`, `fusuma-platform-ios` | phones and tablets | native windows and touch; no web wrapper |
-| Kawara's Wayland platform | Linux desktop and mobile | native, in the Kawara repo |
-| `fusuma-platform-web` | browsers, later and optional | Rust compiled to WebAssembly, drawn into a canvas; no DOM widgets |
-
-Because Fusuma draws everything itself it must also provide text input with an input method
-(`winit` supplies the events), accessibility (`AccessKit`) and a Rust text stack (`parley` and
-`skrifa`, or `cosmic-text` and `swash`; to be chosen). These are the costly parts on phones and the
-web, and they are listed as their own roadmap items.
-
-## Run modes
-
-One set of apps, shell, capabilities and HAL traits; only the layer under the HAL changes.
-
-| Mode | What it is | Targets |
-|---|---|---|
-| **Standalone** | Hibari is the OS and boots on the hardware | MCUs (ESP32, RP, nRF, STM32), QEMU, Raspberry Pi, x86 PCs, open or unlockable phones and wearables |
-| **On Linux** | Hibari is the userspace shell on a minimal Linux kernel; Linux supplies drivers, GPU and radio | devices with mainline or vendor Linux, including unlocked phones |
-| **Hosted** | Hibari is an app inside another OS (`hibari-os-host`, a window plus host input and clock) | Linux, macOS, Windows, Android, iOS; also the development preview |
-
-## Device feasibility (standalone)
-
-The bootloader is rarely the problem: many Android phones unlock and boot a custom image. The
-blocker is undocumented hardware: closed GPU, modem, Wi-Fi/BT firmware, camera and audio DSPs.
-
-| Device class | Own kernel | On Linux |
-|---|---|---|
-| MCUs, wearables and panels with Rust HALs | yes, first | n/a |
-| Raspberry Pi and ARM SBCs | yes | yes |
-| x86 PC (UEFI framebuffer, VirtIO, ACPI, PCI, USB) | yes, hard | yes |
-| Unlocked phones with good mainline Linux support | display, touch and storage first; radio is the hard part | realistic |
-| Unlocked phones with poor mainline support | mostly no | vendor kernel |
-| iPhone, Apple Watch, locked phones | no | no |
-
-The first phone target is the best-supported unlocked device the project owner has (check the
-postmarketOS device tiers). QEMU (`virt` for RISC-V and ARM, `q35` for x86) is the CI target for
-every port.
+A new board is a folder with a `board.toml`, a board library and a firmware crate.
 
 ## Capabilities
 
-A board declares a `CapabilitySet` (`Display`, `Touch`, `Wifi`, `Ble`, `Battery`, ...). An app
-declares what it `requires`. The launcher lists `runnable(board, apps)`, so a headless C6 shows
-no UI apps and a watch shows no app that needs a keyboard. At the kernel level a capability is
-also the handle that grants access to a service (an unforgeable token), so isolation and app
-filtering are the same mechanism.
+A device lists what it offers (`display`, `touch`, `wifi`, `ble`, `battery`, `rtc`, `imu`, `storage`, ...)
+and an app lists what it needs. The launcher shows `runnable(device, apps)`, so a headless board lists no
+screen apps and a watch without WiFi lists no weather app. It is a compile-time and start-up filter, not a
+security boundary.
 
-## Staged plan
+## Rendering
 
-1. **Now: ESP-IDF backend.** Shell, apps and the HAL on the ESP32-S3 AMOLED 2.06. Radio, flash
-   and drivers come from ESP-IDF. We get a working device and a stable app API.
-2. **HAL and kernel API.** Apps and the shell compile against `hibari-os-core` and
-   `hibari-os-hal` only. Host tests and a QEMU RISC-V target run in CI.
-3. **Native backend.** `esp-hal` (`no_std`) plus `esp-wifi` for the radio, the Hibari runtime
-   and the first port (RISC-V). Same apps, no change.
-4. **More ports.** Xtensa, Cortex-M, then x86 (QEMU, framebuffer UI).
-5. **Hosted and Linux modes**, then phones: see `ROADMAP.md`.
+Everything draws through Fusuma's `Renderer` trait, so the choice of backend is one line per firmware.
+
+| Board | Renderer | Why |
+|---|---|---|
+| ESP32-S3, ESP32-P4 (PSRAM, a screen) | `vello_cpu`, with partial redraws | smooth anti-aliased edges and alpha; planned, see below |
+| Boards without PSRAM (ESP32-C6, ESP32) | Fusuma's integer renderer | no floating point, no allocator, a small frame buffer |
+| Headless boards | none | a terminal or serial front end is planned in Fusuma |
+
+What I measured on the S3 (240 MHz, 8 MB PSRAM): `vello_cpu` builds with `libm` and no `std` and draws the
+same picture as the integer renderer, but a full-screen launcher frame takes 261 ms against 61 ms and needs
+1.4 MB. Full frames are not how a good UI updates. A demo that repaints only the touched card (41 ms to
+render, 11 ms to send) felt richer and more responsive on the real screen, so the plan is Vello with partial
+redraws. The shipping launcher still uses the integer renderer, and still repaints the whole screen. The
+P4 is untested. The numbers are in `tools/bench-s3/RESULT.md`.
+
+A bug worth knowing: the CO5300 needs an explicit memory-write command after each address window. Without
+it a partial update lands in the wrong place and tears. Waveshare's own driver sends it; mine did not.
+
+## Runtime, and what comes next
+
+Today the firmware is one bare-metal loop: poll touch, recognise gestures, update the launcher, draw. WiFi
+and Bluetooth need more. The plan, none of it started:
+
+* **`esp-rtos` and Embassy** as the runtime, with `esp-radio` (a beta) for WiFi and BLE, `trouble-host`
+  for BLE and `embassy-net` for TCP/IP.
+* **Services** (network, storage, time) as async tasks that talk through typed messages; a `hibari-services`
+  crate when the first one exists.
+* **Async HAL traits** for storage and network. Whether display and touch go async too is undecided.
+* **Storage:** key-value settings in a flash partition (`sequential-storage`), and a partition layout for
+  Hibari on the 32 MB flash.
+* **Drivers:** PCF85063 (RTC, no crate exists), QMI8658 (a crate exists), AXP2101 (a 2024 crate exists),
+  buttons. Then a status bar with real time and battery.
+* **The app model** waits for a first real app and for Fusuma's widget tree. An app is probably a Fusuma tree
+  plus a manifest and a lifecycle; the earlier `App`, `Event` and `Effect` types were deleted because
+  nothing used them.
+* **Gestures** probably move into Fusuma, which has its own pointer events and needs them on desktops and
+  phones too.
+
+Memory is the real constraint and is only partly measured: the 410x502 RGB565 frame buffer is 412 KB in
+PSRAM; the toolkit tree is a few KB; internal RAM, stack use and what the radio takes are not measured.
+
+## The Dodai family
+
+Names follow a Japanese house. Hibari OS (雲雀, skylark) is this repository.
+
+| Part | Name | Where |
+|---|---|---|
+| UI toolkit and renderer | **Fusuma** | github.com/Dodai-Tech/fusuma |
+| Design system | **Dodai UI** | github.com/Dodai-Tech/dodai-ui |
+| Desktop environment, app store, Linux distribution | Kawara, Noren, Dodai Linux | ideas, no code; not part of Hibari OS |
+
+Hibari depends on Fusuma, and Fusuma never depends on Hibari or on Dodai UI. `dodai-fusuma`, in the
+design-system repository, will apply the Dodai themes to Fusuma.
 
 ## Rules
 
-* Core, HAL, kernel and shell stay `no_std` and `unsafe_code = "forbid"`; `unsafe` lives only
-  in ports and board drivers, each block with a safety comment.
-* The kernel allocates nothing at run time: static tables, static stacks, sizes known at build.
-* Isolation uses the PMP (RISC-V) or MPU (Cortex-M) where it exists. Xtensa and the plain ESP32
-  have none, so apps there are trusted, compiled-in code. This is stated, not hidden.
-* No microcode or GPU code: rendering is software (through `fusuma-render`: the integer renderer on microcontrollers, Vello elsewhere; Slint stays an optional view because its GPL or commercial license does not fit an MIT-only dependency policy), with optional
-  2D accelerators such as the P4 PPA behind the `Display` trait.
-* Radio code is Espressif's closed library. Networking is a driver service wrapping it.
-* Every parser and state machine is unit-tested and fuzzed (`fuzz/`), and `just check-all`
-  stays green.
+* The libraries stay `no_std`, with `unsafe_code = "forbid"`. `unsafe` belongs to board crates, each use
+  with a safety comment.
+* Every parser and state machine is unit-tested and fuzzed (`fuzz/`), and `just check-all` stays green.
+* A board is a file plus a crate, never an edit of a shared list.
+* Radio code is Espressif's closed library; networking wraps it.

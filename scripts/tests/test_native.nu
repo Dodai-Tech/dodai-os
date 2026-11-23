@@ -3,12 +3,33 @@
 
 use std/assert
 use runner.nu *
-use ../native.nu [BOARDS board crc32 le_bytes otadata_entry slot_seq partition check_fits esp_env]
+use ../native.nu [BOARDS board firmware_of crc32 le_bytes otadata_entry slot_seq partition check_fits esp_env]
 
-def "test native: known boards are found, unknown ones are errors" [] {
-    let first = $BOARDS | first
-    assert equal (board $first.name) $first
+def "test native: known boards are found with their firmware settings, unknown ones are errors" [] {
+    for b in $BOARDS {
+        let found = board $b.name
+        assert equal ($found | select name dir crate device) ($b | select name dir crate device)
+        assert ($found.flash_mb > 0) $"($b.name) has a flash size"
+        assert ($found.target | str contains "none-elf") $"($b.name) is an esp-hal board"
+        const root = path self ../..
+        assert ($root | path join $b.dir Cargo.toml | path exists) $"($b.dir)/Cargo.toml is missing"
+    }
     assert (try { board "nope"; false } catch { true })
+}
+
+def "test native: the firmware table is read from a board file and every key is required" [] {
+    let dir = mktemp --directory
+    let good = $dir | path join good.toml
+    "name = \"x\"\n[firmware]\nchip = \"esp32s3\"\ntarget = \"t\"\nflash_mb = 16\n" | save $good
+    assert equal (firmware_of $good) { chip: esp32s3, target: t, flash_mb: 16 }
+    let none = $dir | path join none.toml
+    "name = \"x\"\n" | save $none
+    assert (try { firmware_of $none; false } catch {|e| $e.msg | str contains "no [firmware] table" })
+    let partial = $dir | path join partial.toml
+    "[firmware]\nchip = \"esp32s3\"\ntarget = \"t\"\n" | save $partial
+    assert (try { firmware_of $partial; false } catch {|e| $e.msg | str contains "flash_mb" })
+    assert (try { firmware_of ($dir | path join missing.toml); false } catch {|e| $e.msg | str contains "does not exist" })
+    rm -rf $dir
 }
 
 def "test native: crc32 matches the standard check values" [] {

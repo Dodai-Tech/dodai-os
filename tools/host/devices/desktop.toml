@@ -1,0 +1,8 @@
+# A window on a computer. A simulated device for the host preview.
+name = "desktop"
+capabilities = ["display", "touch", "wifi", "storage"]
+
+[display]
+width = 1280
+height = 800
+shape = "rect"

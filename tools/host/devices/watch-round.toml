@@ -1,0 +1,8 @@
+# A round smartwatch: 466 px, no WiFi. A simulated device for the host preview.
+name = "watch-round"
+capabilities = ["display", "touch", "button", "ble", "battery", "imu", "storage"]
+
+[display]
+width = 466
+height = 466
+shape = "round"

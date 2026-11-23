@@ -1,5 +1,5 @@
 [package]
-name = "hibari-os-core-fuzz"
+name = "hibari-os-fuzz"
 version = "0.0.0"
 publish = false
 edition = "2024"
@@ -9,8 +9,9 @@ cargo-fuzz = true
 
 [dependencies]
 libfuzzer-sys = "0.4"
-hibari-os-core = { path = "../crates/hibari-os-core" }
-hibari-os-kernel = { path = "../crates/hibari-os-kernel" }
+hibari-device = { path = "../crates/hibari-device" }
+hibari-hal = { path = "../crates/hibari-hal" }
+hibari-kernel = { path = "../experiments/kernel" }
 
 # Not part of the main workspace (needs nightly).
 [workspace]

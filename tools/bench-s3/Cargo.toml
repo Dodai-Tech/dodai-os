@@ -1,0 +1,33 @@
+[package]
+name = "hibari-bench-s3"
+description = "Hibari OS, a thin operating system for ESP32 boards: benchmark of vello_cpu against the integer renderer on the ESP32-S3 (not published)"
+readme = "README.md"
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+publish = false
+
+[[bin]]
+name = "hibari-bench-s3"
+path = "src/main.rs"
+test = false
+
+[dependencies]
+fusuma-render = "0.2"
+fusuma-render-embedded = "0.2"
+vello_cpu = { version = "0.4", default-features = false, features = ["libm", "u8_pipeline"] }
+esp-hal = { version = "1.0.0", features = ["esp32s3", "unstable", "psram", "log-04"] }
+esp-alloc = "0.9.0"
+esp-println = { version = "0.16.1", features = ["esp32s3", "log-04"] }
+esp-backtrace = { version = "0.18.1", features = ["esp32s3", "panic-handler", "println"] }
+esp-bootloader-esp-idf = { version = "0.4", features = ["esp32s3"] }
+log = "0.4"
+
+[profile.dev]
+opt-level = "s"
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+debug = "line-tables-only"

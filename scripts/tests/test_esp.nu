@@ -26,7 +26,7 @@ def "test esp: every firmware crate ships its template files" [] {
     const root = path self ../..
     for fw in $FIRMWARE {
         for f in [Cargo.toml build.rs partitions.csv sdkconfig.defaults.in rust-toolchain.toml .cargo/config.toml src/main.rs] {
-            assert ($root | path join crates $fw.crate $f | path exists) $"($fw.crate)/($f) is missing"
+            assert ($root | path join $fw.dir $f | path exists) $"($fw.dir)/($f) is missing"
         }
     }
 }

@@ -33,10 +33,10 @@ export def notes [version: string, changes: string]: nothing -> string {
     [
         $"# Hibari OS ($version)"
         ""
-        $"Add it from crates.io \(docs: https://docs.rs/hibari-os-core/($version)\):"
+        $"Add it from crates.io \(docs: https://docs.rs/hibari-os-app/($version)\):"
         ""
         "```sh"
-        "cargo add hibari-os-core"
+        "cargo add hibari-os-app"
         "```"
         ""
         "## Changes"

@@ -13,8 +13,8 @@
 
 const ROOT = path self ..
 
-# One record per firmware crate: crate, chip, target, flash_mb (written by the scaffold).
-export const FIRMWARE = [[crate, chip, target, flash_mb]; ["hibari-os-esp32s3", "esp32s3", "xtensa-esp32s3-espidf", 32]]
+# One record per firmware crate: crate, directory, chip, target, flash_mb.
+export const FIRMWARE = [[crate, dir, chip, target, flash_mb]; ["hibari-board-esp32s3-idf", "boards/esp32s3-idf", "esp32s3", "xtensa-esp32s3-espidf", 32]]
 
 # ── Pure helpers ──────────────────────────────────────────────────────────────
 
@@ -90,7 +90,7 @@ def hex [n: int]: nothing -> string { $n | format number | get lowerhex }
 
 def "main gen-sdkconfig" [] {
     for fw in $FIRMWARE {
-        let dir = $ROOT | path join crates $fw.crate
+        let dir = $ROOT | path join $fw.dir
         let csv = $dir | path join partitions.csv | path expand
         sdkconfig_text (open --raw ($dir | path join sdkconfig.defaults.in)) $csv | save -f ($dir | path join sdkconfig.defaults)
         print $"Generated ($dir | path join sdkconfig.defaults)"
@@ -99,7 +99,7 @@ def "main gen-sdkconfig" [] {
 
 def "main build" [crate: string, --release] {
     let fw = firmware $crate
-    cd ($ROOT | path join crates $fw.crate)
+    cd ($ROOT | path join $fw.dir)
     if $release { ^cargo build --release } else { ^cargo build }
 }
 
@@ -109,7 +109,7 @@ def "main build-all" [] {
 
 def "main flash" [crate: string, --port: string = ""] {
     let fw = firmware $crate
-    let dir = $ROOT | path join crates $fw.crate
+    let dir = $ROOT | path join $fw.dir
     let out = $dir | path join target $fw.target release
     let bl = newest_bootloader ($out | path join build)
     if $bl == null { error make { msg: $"bootloader.bin not found under ($out)/build; run `just fw-release ($crate)`" } }

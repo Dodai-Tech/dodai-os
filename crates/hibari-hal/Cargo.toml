@@ -1,0 +1,23 @@
+[package]
+name = "hibari-hal"
+description = "Hardware abstraction of Hibari OS, a thin operating system for ESP32 boards, written in Rust: display, touch, backlight and clock traits, touch input and gestures (no_std)"
+readme = "README.md"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+keywords.workspace = true
+categories.workspace = true
+authors.workspace = true
+repository.workspace = true
+publish = false
+
+[lib]
+name = "hibari_hal"
+path = "src/lib.rs"
+
+[dependencies]
+hibari-device.workspace = true
+
+[lints]
+workspace = true

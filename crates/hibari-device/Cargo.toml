@@ -1,0 +1,28 @@
+[package]
+name = "hibari-device"
+description = "Hibari OS, a thin operating system for ESP32 boards, written in Rust: what a device is, its capabilities, screen and firmware settings, loaded from board.toml (no_std)"
+readme = "README.md"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+keywords.workspace = true
+categories.workspace = true
+authors.workspace = true
+repository.workspace = true
+publish = false
+
+[lib]
+name = "hibari_device"
+path = "src/lib.rs"
+
+[features]
+# Load a device from TOML text and generate Rust constants (for tools and build scripts).
+toml = ["dep:toml", "dep:serde"]
+
+[dependencies]
+toml = { workspace = true, optional = true }
+serde = { workspace = true, optional = true }
+
+[lints]
+workspace = true

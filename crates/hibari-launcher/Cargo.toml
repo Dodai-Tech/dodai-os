@@ -1,0 +1,31 @@
+[package]
+name = "hibari-launcher"
+description = "Launcher of Hibari OS, a thin operating system for ESP32 boards, written in Rust: app manifest, paging and navigation, and an interim view drawn through Fusuma (no_std)"
+readme = "README.md"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+keywords.workspace = true
+categories.workspace = true
+authors.workspace = true
+repository.workspace = true
+publish = false
+
+[lib]
+name = "hibari_launcher"
+path = "src/lib.rs"
+
+[dependencies]
+fusuma-anim.workspace = true
+hibari-device.workspace = true
+hibari-hal.workspace = true
+fusuma-render.workspace = true
+embedded-graphics.workspace = true
+
+[lints]
+workspace = true
+
+[dev-dependencies]
+fusuma-render-embedded.workspace = true
+fusuma-render-vello-cpu.workspace = true

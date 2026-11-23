@@ -1,0 +1,17 @@
+# The Waveshare ESP32-S3-Touch-AMOLED-2.06: the one description of this device. The firmware gets its
+# constants from it at build time (build.rs), the host preview loads it, and `scripts/native.nu` reads
+# the [firmware] table.
+name = "waveshare-s3-amoled-2.06"
+capabilities = ["display", "touch", "button", "wifi", "ble", "battery", "rtc", "imu", "storage"]
+
+[display]
+width = 410
+height = 502
+shape = "rect"
+# The panel's memory is 22 columns wider on the left than what is visible.
+offset = [22, 0]
+
+[firmware]
+chip = "esp32s3"
+target = "xtensa-esp32s3-none-elf"
+flash_mb = 32

@@ -144,6 +144,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "361a90feb7004eca4019fb28352a9465666b24f840f5c3cddf0ff13920590b89"
 
 [[package]]
+name = "equivalent"
+version = "1.0.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "00d174d5400e5e8fd687ad1049e2f578285fa914201b1af7e8b112a4546bd826"
+
+[[package]]
 name = "euclid"
 version = "0.22.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -388,68 +394,72 @@ dependencies = [
 ]
 
 [[package]]
-name = "hibari-os-core"
+name = "hibari-device"
 version = "0.1.0"
 dependencies = [
- "fusuma-anim",
+ "serde",
+ "toml",
 ]
 
 [[package]]
-name = "hibari-os-drivers"
+name = "hibari-drivers"
 version = "0.1.0"
 dependencies = [
  "embedded-hal",
- "hibari-os-core",
- "hibari-os-hal",
+ "hibari-device",
+ "hibari-hal",
 ]
 
 [[package]]
-name = "hibari-os-hal"
+name = "hibari-hal"
 version = "0.1.0"
 dependencies = [
- "hibari-os-core",
+ "hibari-device",
 ]
 
 [[package]]
-name = "hibari-os-host"
+name = "hibari-host"
 version = "0.1.0"
 dependencies = [
  "embedded-graphics",
  "fusuma-render",
  "fusuma-render-embedded",
  "fusuma-render-vello-cpu",
- "hibari-os-core",
- "hibari-os-hal",
- "hibari-os-shell",
- "hibari-os-shell-model",
+ "hibari-device",
+ "hibari-hal",
+ "hibari-launcher",
  "minifb",
  "png",
 ]
 
 [[package]]
-name = "hibari-os-kernel"
+name = "hibari-kernel"
 version = "0.1.0"
 dependencies = [
- "hibari-os-core",
+ "hibari-device",
 ]
 
 [[package]]
-name = "hibari-os-shell"
+name = "hibari-launcher"
 version = "0.1.0"
 dependencies = [
  "embedded-graphics",
+ "fusuma-anim",
  "fusuma-render",
  "fusuma-render-embedded",
  "fusuma-render-vello-cpu",
- "hibari-os-core",
- "hibari-os-shell-model",
+ "hibari-device",
+ "hibari-hal",
 ]
 
 [[package]]
-name = "hibari-os-shell-model"
-version = "0.1.0"
+name = "indexmap"
+version = "2.14.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cc4e190f5d26ca7051642629da2c52fc03bde85a03197c99408dcd291734c855"
 dependencies = [
- "hibari-os-core",
+ "equivalent",
+ "hashbrown",
 ]
 
 [[package]]
@@ -771,6 +781,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "serde_spanned"
+version = "1.1.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9c187e0a369471c550af028cba56d4f4fa2a489ad28151ae95a4d340a2a8b782"
+dependencies = [
+ "serde_core",
+]
+
+[[package]]
 name = "shlex"
 version = "2.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -863,6 +882,45 @@ checksum = "b52fd3255258d26fac7264ab5a76b53c13367136dc011d3d6ad4f8ed070396a3"
 dependencies = [
  "pin-project-lite",
 ]
+
+[[package]]
+name = "toml"
+version = "1.2.2+spec-1.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5426cb1b964690d913f6c5c1a1ae0b42f428ec506bb4d452876d7a209c9bca3b"
+dependencies = [
+ "indexmap",
+ "serde_core",
+ "serde_spanned",
+ "toml_datetime",
+ "toml_parser",
+ "toml_writer",
+ "winnow",
+]
+
+[[package]]
+name = "toml_datetime"
+version = "1.1.3+spec-1.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "173f25c883cd2176a2d8212155638c0a60d484a9d84546d270866f40f56b6e49"
+dependencies = [
+ "serde_core",
+]
+
+[[package]]
+name = "toml_parser"
+version = "1.1.6+spec-1.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e6769c452d71ba30696c6b37770c439a9cc9110f47f7d5cdbeda79840ef5ea31"
+dependencies = [
+ "winnow",
+]
+
+[[package]]
+name = "toml_writer"
+version = "1.2.0+spec-1.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "009dbb7700f11c55ef83aebbe4c0e9cf1f1ac0844bd8d6f00dc38f302026e13a"
 
 [[package]]
 name = "unicode-ident"
@@ -1006,6 +1064,12 @@ name = "winapi-x86_64-pc-windows-gnu"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "712e227841d057c1ee1cd2fb22fa7e5a5461ae8e48fa2ca79ec42cfc1931183f"
+
+[[package]]
+name = "winnow"
+version = "1.0.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8c3b93199df0ab874cdf0c6a94f0a0dc3423fe41f1cafb62b8bd7b1deb277aef"
 
 [[package]]
 name = "x11-dl"

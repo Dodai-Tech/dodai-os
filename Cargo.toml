@@ -3,22 +3,21 @@ resolver = "3"
 # Only host-testable code is a workspace member. Firmware crates need the ESP toolchain and
 # their own .cargo/config.toml + rust-toolchain.toml, so they are excluded and build on their own.
 members = [
-    "crates/hibari-os-core",
-    "crates/hibari-os-hal",
-    "crates/hibari-os-kernel",
-    "crates/hibari-os-shell-model",
-    "crates/hibari-os-shell",
-    "crates/hibari-os-drivers",
-    "crates/hibari-os-host",
+    "crates/hibari-device",
+    "crates/hibari-hal",
+    "crates/hibari-drivers",
+    "crates/hibari-launcher",
+    "tools/host",
+    "experiments/kernel",
 ]
 exclude = [
-    "crates/hibari-os-esp32s3",
-    "crates/hibari-os-s3-amoled-206",
-    "crates/hibari-os-s3-bench",
-    "crates/hibari-os-s3-vello-demo",
+    "boards/s3-amoled-206",
+    "boards/esp32s3-idf",
+    "tools/bench-s3",
+    "tools/vello-demo-s3",
 ]
 
-# One version for the core and the workspace; `just bump X.Y.Z` edits it. Firmware crates keep
+# One version for the workspace; `just bump X.Y.Z` edits it. Firmware crates keep
 # their own version (they are not part of the release).
 [workspace.package]
 version = "0.1.0"
@@ -31,10 +30,11 @@ categories = ["embedded", "no-std", "os"]
 repository = "https://github.com/Dodai-Tech/hibari-os"
 
 [workspace.dependencies]
-hibari-os-core = { path = "crates/hibari-os-core", version = "0.1.0" }
-hibari-os-hal = { path = "crates/hibari-os-hal", version = "0.1.0" }
-hibari-os-shell-model = { path = "crates/hibari-os-shell-model", version = "0.1.0" }
-hibari-os-shell = { path = "crates/hibari-os-shell", version = "0.1.0" }
+hibari-device = { path = "crates/hibari-device", version = "0.1.0" }
+hibari-hal = { path = "crates/hibari-hal", version = "0.1.0" }
+hibari-launcher = { path = "crates/hibari-launcher", version = "0.1.0" }
+serde = { version = "1", default-features = false, features = ["derive", "std"] }
+toml = { version = "1", default-features = false, features = ["parse", "serde", "std"] }
 embedded-hal = "1.0"
 embedded-graphics = "0.8.2"
 fusuma-anim = "0.2"

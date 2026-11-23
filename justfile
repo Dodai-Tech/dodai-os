@@ -41,11 +41,11 @@ gen-sdkconfig:
     nu scripts/esp.nu gen-sdkconfig
 
 # Build a firmware crate (debug)
-fw-build crate="hibari-os-esp32s3": gen-sdkconfig
+fw-build crate="hibari-board-esp32s3-idf": gen-sdkconfig
     nu scripts/esp.nu build {{ crate }}
 
 # Build a firmware crate (release)
-fw-release crate="hibari-os-esp32s3": gen-sdkconfig
+fw-release crate="hibari-board-esp32s3-idf": gen-sdkconfig
     nu scripts/esp.nu build {{ crate }} --release
 
 # Build every firmware crate in release mode (slow; not part of CI)
@@ -53,7 +53,7 @@ check-firmware: gen-sdkconfig
     nu scripts/esp.nu build-all
 
 # Flash a firmware crate (release) and open the serial monitor; port optional
-flash crate="hibari-os-esp32s3" port="": (fw-release crate)
+flash crate="hibari-board-esp32s3-idf" port="": (fw-release crate)
     nu scripts/esp.nu flash {{ crate }} --port "{{ port }}"
 
 # Serial monitor only (resets the board)
@@ -223,7 +223,7 @@ validate-tag version:
 release-preview: _check-git-cliff
     @print $"Current version: (nu scripts/version.nu)\n"
     @git-cliff --unreleased
-    @echo "Ships: hibari-os-core (crates.io, docs on docs.rs)"
+    @echo "Ships: nothing yet (no Hibari OS crate is published)"
 
 # Everything in check-all plus a release build and the docs
 check-release: check-all build-release doc
