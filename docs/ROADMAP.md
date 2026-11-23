@@ -39,12 +39,12 @@ The full plan, crate structure and decisions are in the Fusuma repository: `docs
 - [x] `hibari-os-core` re-exports `fusuma-anim`; its own animation module is gone and the shell uses `fusuma-anim`'s `Tween` and `Easing`
 - [ ] Spring-driven transitions: a spring needs per-frame state (stepped with the frame time), so `Ui::draw` stops being a pure function of the clock; design that together with the Fusuma animator, and with drag-to-swipe so a finger can pull a page
 - [x] `fusuma-render-vello` (GPU backend) exists and passes the conformance suite; effects (shadow, blur, gradients) and shaders come next as optional capabilities, and the shader engine reuses `dodai-shaders`
-- [ ] Experiment: run `vello_cpu` on the S3 (it builds there with `libm`) and compare with the integer renderer
+- [x] Measured `vello_cpu` on the S3 (`crates/hibari-os-s3-bench`): about 4x slower than the integer renderer (261 ms against 61 ms for a full-screen launcher frame, 68 against 14 ms for a 410x120 strip) and 1.4 MB; it works, but the ESP keeps the integer renderer. Open: the P4, and text
 - [ ] Fusuma toolkit: widget tree, `taffy` layout, events, text, widgets; rebuild the launcher and settings on them
 - [ ] `dodai-fusuma`: Dodai UI for Fusuma, as one more `dodai-<toolkit>` adapter, with a `ShaderView`
 - [ ] `fusuma-platform-mcu` (Hibari OS boards), `-desktop`, `-android`, `-ios`, `-tui`, and later `-web`
 - [ ] `dodai-fx`: its `Painter` trait overlaps the `Renderer` of `fusuma-render`; draw effects through it
-- [ ] Measure the frame rate of a slide on the S3 and use partial updates if it is too low
+- [ ] Speed up the integer renderer on the S3: a full-screen frame takes 61 ms before the flush (the frame buffer is in slow PSRAM and a clear alone writes 412 KB), so a slide runs near 10 fps; options are redrawing only the strip that changed, filling spans instead of per-pixel writes, and keeping hot rows in internal RAM
 
 ## Phase 2: more boards
 - [ ] ESP32-P4 7" touch display (`riscv32imafc`, esp_hosted WiFi)
