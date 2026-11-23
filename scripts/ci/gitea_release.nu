@@ -1,6 +1,6 @@
 #!/usr/bin/env nu
 # ──────────────────────────────────────────────────────────────────────────────
-# Dodai OS — Create a Gitea release and upload the archives
+# Hibari OS — Create a Gitea release and upload the archives
 # ──────────────────────────────────────────────────────────────────────────────
 # Usage (in .gitea/workflows/release.yml):
 #   nu scripts/ci/gitea_release.nu <tag> --api <server>/api/v1/repos/<owner>/<repo> --dir dist
@@ -11,7 +11,7 @@ export def release_payload [tag: string, title: string, notes: string] {
     { tag_name: $tag, name: $"($title) ($tag)", body: $notes }
 }
 
-def main [tag: string, --api: string, --dir: path = "dist", --title: string = "Dodai OS"] {
+def main [tag: string, --api: string, --dir: path = "dist", --title: string = "Hibari OS"] {
     let headers = { Authorization: $"token ($env.GITEA_TOKEN)" }
     let notes = if ("RELEASE_NOTES.md" | path exists) { open --raw RELEASE_NOTES.md } else { "" }
     let release = http post --content-type application/json --headers $headers $"($api)/releases" (release_payload $tag $title $notes)

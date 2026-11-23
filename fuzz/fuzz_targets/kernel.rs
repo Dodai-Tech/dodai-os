@@ -2,8 +2,8 @@
 //! Random kernel calls never panic, and capabilities are never created from nothing: a task only
 //! ever holds capabilities it was spawned with or that a holder delegated.
 
-use dodai_os_core::{Capability, CapabilitySet};
-use dodai_os_kernel::{Kernel, TaskId};
+use hibari_os_core::{Capability, CapabilitySet};
+use hibari_os_kernel::{Kernel, TaskId};
 use libfuzzer_sys::fuzz_target;
 
 fuzz_target!(|data: &[u8]| {

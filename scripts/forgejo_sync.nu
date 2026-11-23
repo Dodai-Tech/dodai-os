@@ -1,6 +1,6 @@
 #!/usr/bin/env nu
 # ──────────────────────────────────────────────────────────────────────────────
-# Dodai OS — Derive the Codeberg (Forgejo) workflows from the Gitea ones
+# Hibari OS — Derive the Codeberg (Forgejo) workflows from the Gitea ones
 # ──────────────────────────────────────────────────────────────────────────────
 # Codeberg runs Forgejo Actions, which reads .forgejo/workflows/ first. Those files
 # are the .gitea/workflows/ ones with Forgejo names; .gitea/ stays the source.

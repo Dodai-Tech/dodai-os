@@ -1,0 +1,40 @@
+[package]
+name = "hibari-os-host"
+description = "Runs Hibari OS, a thin operating system for ESP32 boards, written in Rust, on a desktop for development: device profiles, screenshots and a window"
+readme = "README.md"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+keywords.workspace = true
+categories.workspace = true
+authors.workspace = true
+repository.workspace = true
+publish = false
+
+[lib]
+name = "hibari_os_host"
+path = "src/lib.rs"
+
+[features]
+# A real window (minifb): mouse as touch. Off by default so CI needs no display libraries.
+window = ["dep:minifb"]
+
+[dependencies]
+hibari-os-core.workspace = true
+hibari-os-hal.workspace = true
+hibari-os-shell.workspace = true
+hibari-os-shell-model.workspace = true
+embedded-graphics.workspace = true
+fusuma-render.workspace = true
+fusuma-render-embedded.workspace = true
+fusuma-render-vello-cpu.workspace = true
+png.workspace = true
+minifb = { workspace = true, optional = true }
+
+[lints]
+workspace = true
+
+[[bin]]
+name = "hibari-os-host"
+path = "src/main.rs"

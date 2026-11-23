@@ -1,6 +1,6 @@
-# Dodai OS architecture
+# Hibari OS architecture
 
-Dodai OS (土台, "foundation") is a small, efficient app platform for microcontroller boards:
+Hibari OS (土台, "foundation") is a small, efficient app platform for microcontroller boards:
 RISC-V first (ESP32-C6, P4), then Xtensa (ESP32-S3), ARM Cortex-M and, experimentally, x86.
 The goal is a microkernel with user-level services. We get there in stages, so there is always
 something running on a real board.
@@ -17,22 +17,22 @@ backends     esp-idf (now), native no_std      implement the HAL traits
 boards       one crate per device              pins, drivers, capability list
 ```
 
-Apps never touch a backend. They see events in and effects out (`dodai-os-core`), and reach
+Apps never touch a backend. They see events in and effects out (`hibari-os-core`), and reach
 hardware only through capabilities the shell grants.
 
 ## Crates
 
 | Crate | Role | `no_std` |
 |---|---|---|
-| `dodai-os-core` | capabilities, touch gestures, the `App` contract | yes |
-| `dodai-os-hal` | `Display`, `Touch`, `Backlight`, `Clock`, `Board` traits | yes |
-| `dodai-os-shell-model` | launcher paging, hit testing, navigation (no UI toolkit) | yes |
-| `dodai-os-shell` | view: status bar, app grid, app page, drawn with `embedded-graphics` on any RGB565 target | yes |
-| `dodai-os-kernel` | cooperative scheduler, message queues, capability table | yes |
-| `dodai-os-host` | hosted backend: device profiles, host clock and display | no |
-| `dodai-os-port-<arch>` (planned) | architecture-specific code | yes |
-| `dodai-os-<chip>` | firmware (ESP-IDF today), excluded from the workspace | no |
-| `dodai-os-board-<name>` (planned) | one device: pins, drivers, capabilities | yes |
+| `hibari-os-core` | capabilities, touch gestures, the `App` contract | yes |
+| `hibari-os-hal` | `Display`, `Touch`, `Backlight`, `Clock`, `Board` traits | yes |
+| `hibari-os-shell-model` | launcher paging, hit testing, navigation (no UI toolkit) | yes |
+| `hibari-os-shell` | view: status bar, app grid, app page, drawn with `embedded-graphics` on any RGB565 target | yes |
+| `hibari-os-kernel` | cooperative scheduler, message queues, capability table | yes |
+| `hibari-os-host` | hosted backend: device profiles, host clock and display | no |
+| `hibari-os-port-<arch>` (planned) | architecture-specific code | yes |
+| `hibari-os-<chip>` | firmware (ESP-IDF today), excluded from the workspace | no |
+| `hibari-os-board-<name>` (planned) | one device: pins, drivers, capabilities | yes |
 
 Design tokens and themes come from `dodai-core` (the `dodai-ui` repo); the OS never reuses
 that name.
@@ -41,15 +41,15 @@ that name.
 
 | Product | What it is | Built on |
 |---|---|---|
-| **Dodai OS** | Own microkernel and app platform, staged by hardware: RISC-V ESPs first, then Xtensa, ARM, x86, open or unlockable phones, tablets and watches | own kernel (ESP-IDF while bootstrapping) |
+| **Hibari OS** | Own microkernel and app platform, staged by hardware: RISC-V ESPs first, then Xtensa, ARM, x86, open or unlockable phones, tablets and watches | own kernel (ESP-IDF while bootstrapping) |
 | **Kawara** (the Dodai desktop environment) | Desktop and mobile shell in Rust: Wayland compositor, panel, launcher, settings | Linux (probably Smithay) |
 | **Dodai Linux** | Arch-based distribution that ships Kawara: installer, package repo, `archiso` images | Arch Linux |
 
-Shared by all three: `dodai-core` and `dodai-ui` (tokens, themes, widgets), `dodai-os-core`
+Shared by all three: `dodai-core` and `dodai-ui` (tokens, themes, widgets), `hibari-os-core`
 (`no_std`: capabilities, gestures, the `App` contract), the shell model (launcher, navigation,
 settings pages, notifications; UI-toolkit independent) and the apps. Not shared: the HAL
 (devices only; the DE gets input and display from libinput, DRM and Wayland), the kernel, ports
-and board crates (Dodai OS only), the compositor, session, packaging and installer (DE and Linux).
+and board crates (Hibari OS only), the compositor, session, packaging and installer (DE and Linux).
 
 Rule: a shared crate has no platform dependency. Each product supplies a thin adapter.
 "Any hardware" means any hardware that has a port and drivers: per device, not automatic.
@@ -58,27 +58,27 @@ Dodai Linux covers desktops and laptops first.
 
 ## The Dodai family
 
-Names follow a Japanese house: Dodai (土台) is the foundation, and each layer above has its own
+Names follow a Japanese house. Dodai (土台, foundation) is the family and the design system; Hibari (雲雀, skylark) is the thin operating system for ESP32 boards, and each layer above has its own
 name, so each can be used without the others.
 
 | House part | Product | Name | Notes |
 |---|---|---|---|
-| Foundation 土台 | OS with its own microkernel | **Dodai OS** (`dodai-os-*`) | this repo |
+| Foundation 土台 | OS with its own microkernel | **Hibari OS** (`hibari-os-*`) | this repo |
 | Sliding doors 襖 | UI toolkit and its renderer | **Fusuma** | OS-agnostic. Renderer: `fusuma-render` (the trait), `-embedded` (microcontrollers), `-vello-cpu` and later `-vello` (GPU); animation: `fusuma-anim`; widgets, layout, text, effects and shaders (`fusuma-*`) are planned. One repo, `fusuma`; apps depend on one `fusuma` crate and the backend is chosen by target. See its `docs/ROADMAP.md`. |
 | Finish | design system | **Dodai UI** (`dodai-ui-*`) | tokens, four designs, one adapter crate per toolkit, including `dodai-ui-fusuma` |
 | Roof tiles 瓦 | desktop and mobile environment | **Kawara** | Linux, Wayland. Planned. |
-| Shop curtain 暖簾 | app store | **Noren** | front end over Flatpak and pacman; a store for Dodai OS is research. Planned. |
+| Shop curtain 暖簾 | app store | **Noren** | front end over Flatpak and pacman; a store for Hibari OS is research. Planned. |
 | The house | Arch-based distribution | **Dodai Linux** | ships Kawara and Noren. Planned. |
 
-Dependencies point one way: Dodai OS and Kawara use Fusuma, the toolkit crates use `fusuma-render`, and
+Dependencies point one way: Hibari OS and Kawara use Fusuma, the toolkit crates use `fusuma-render`, and
 `fusuma-render*` knows nothing above it; a CI rule in the Fusuma repo enforces that. `dodai-ui-fusuma` uses Fusuma and the design tokens; Fusuma never imports
 `dodai-ui-*`.
 
 Naming rules:
 * `dodai-ui-<toolkit>` is a design-system adapter; `dodai-ui-<capability>` is toolkit-neutral.
-* `dodai-os-<role>` is the OS; `-core` always means the portable, UI-free heart of that product.
-* Logic shared by Dodai OS and Kawara (the launcher model) gets a neutral name when Kawara starts
-  (`dodai-os-shell-model` becomes `dodai-shell-model`), so neither product depends on the other.
+* `hibari-os-<role>` is the OS; `-core` always means the portable, UI-free heart of that product.
+* Logic shared by Hibari OS and Kawara (the launcher model) gets a neutral name when Kawara starts
+  (`hibari-os-shell-model` becomes a neutral `shell-model`), so neither product depends on the other.
 
 ## Rendering and platforms: native Rust, no web technology
 
@@ -101,7 +101,7 @@ Fusuma reaches each target through a small platform crate:
 
 | Crate | Target | Notes |
 |---|---|---|
-| `fusuma-platform-mcu` | microcontroller displays | display and touch drivers, as in Dodai OS today |
+| `fusuma-platform-mcu` | microcontroller displays | display and touch drivers, as in Hibari OS today |
 | `fusuma-platform-desktop` | Linux, macOS, Windows | `winit` window, pixel buffer or GPU surface |
 | `fusuma-platform-android`, `fusuma-platform-ios` | phones and tablets | native windows and touch; no web wrapper |
 | Kawara's Wayland platform | Linux desktop and mobile | native, in the Kawara repo |
@@ -118,9 +118,9 @@ One set of apps, shell, capabilities and HAL traits; only the layer under the HA
 
 | Mode | What it is | Targets |
 |---|---|---|
-| **Standalone, own kernel** | Dodai is the OS and boots on the hardware | MCUs (ESP32, RP, nRF, STM32), QEMU, Raspberry Pi, x86 PCs, open or unlockable phones and wearables |
-| **On Linux** | Dodai is the userspace shell on a minimal Linux kernel; Linux supplies drivers, GPU and radio | devices with mainline or vendor Linux, including unlocked phones |
-| **Hosted** | Dodai is an app inside another OS (`dodai-os-host`, a window plus host input and clock) | Linux, macOS, Windows, Android, iOS; also the development preview |
+| **Standalone** | Hibari is the OS and boots on the hardware | MCUs (ESP32, RP, nRF, STM32), QEMU, Raspberry Pi, x86 PCs, open or unlockable phones and wearables |
+| **On Linux** | Hibari is the userspace shell on a minimal Linux kernel; Linux supplies drivers, GPU and radio | devices with mainline or vendor Linux, including unlocked phones |
+| **Hosted** | Hibari is an app inside another OS (`hibari-os-host`, a window plus host input and clock) | Linux, macOS, Windows, Android, iOS; also the development preview |
 
 ## Device feasibility (standalone)
 
@@ -152,9 +152,9 @@ filtering are the same mechanism.
 
 1. **Now: ESP-IDF backend.** Shell, apps and the HAL on the ESP32-S3 AMOLED 2.06. Radio, flash
    and drivers come from ESP-IDF. We get a working device and a stable app API.
-2. **HAL and kernel API.** Apps and the shell compile against `dodai-os-core` and
-   `dodai-os-hal` only. Host tests and a QEMU RISC-V target run in CI.
-3. **Native backend.** `esp-hal` (`no_std`) plus `esp-wifi` for the radio, the Dodai kernel
+2. **HAL and kernel API.** Apps and the shell compile against `hibari-os-core` and
+   `hibari-os-hal` only. Host tests and a QEMU RISC-V target run in CI.
+3. **Native backend.** `esp-hal` (`no_std`) plus `esp-wifi` for the radio, the Hibari runtime
    and the first port (RISC-V). Same apps, no change.
 4. **More ports.** Xtensa, Cortex-M, then x86 (QEMU, framebuffer UI).
 5. **Hosted and Linux modes**, then phones: see `ROADMAP.md`.

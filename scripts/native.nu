@@ -1,6 +1,6 @@
 #!/usr/bin/env nu
 # ──────────────────────────────────────────────────────────────────────────────
-# dodai-os: esp-hal (no_std) boards, built and flashed without ESP-IDF
+# hibari-os: esp-hal (no_std) boards, built and flashed without ESP-IDF
 # ──────────────────────────────────────────────────────────────────────────────
 # Flashing is non-destructive: the image goes into an OTA slot and an `otadata` entry selects
 # it. The bootloader, the partition table and the native firmware are not touched, and
@@ -21,7 +21,7 @@ use esp.nu [parse_ptable]
 const ROOT = path self ..
 
 # One record per board: name, crate, chip, target, flash_mb.
-export const BOARDS = [[name, crate, chip, target, flash_mb]; ["s3-amoled-206", "dodai-os-s3-amoled-206", "esp32s3", "xtensa-esp32s3-none-elf", 32]]
+export const BOARDS = [[name, crate, chip, target, flash_mb]; ["s3-amoled-206", "hibari-os-s3-amoled-206", "esp32s3", "xtensa-esp32s3-none-elf", 32]]
 
 # ── Pure helpers ──────────────────────────────────────────────────────────────
 
@@ -128,7 +128,7 @@ def "main install" [--board: string = "s3-amoled-206", --slot: string = "ota_0",
     ^espflash write-bin ...(port_args $port) $target.offset $image
     ^espflash write-bin ...(port_args $port) $otadata.offset $entry
     ^espflash reset ...(port_args $port)
-    print -e $"Dodai OS installed in ($slot); run `nu scripts/native.nu native` to boot the native firmware again."
+    print -e $"Hibari OS installed in ($slot); run `nu scripts/native.nu native` to boot the native firmware again."
 }
 
 # Erases otadata so the bootloader runs the factory app (the board's native firmware).

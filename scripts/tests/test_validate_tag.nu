@@ -1,5 +1,5 @@
 #!/usr/bin/env nu
-# ── Dodai OS · test_validate_tag.nu ─────────────────────────────────────────
+# ── Hibari OS · test_validate_tag.nu ─────────────────────────────────────────
 # Tests for scripts/ci/validate_tag.nu — tag validation and version extraction.
 
 use std/assert

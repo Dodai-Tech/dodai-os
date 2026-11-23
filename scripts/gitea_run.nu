@@ -1,13 +1,13 @@
 #!/usr/bin/env nu
 # ──────────────────────────────────────────────────────────────────────────────
-# Dodai OS — Start a Gitea workflow now (workflow_dispatch)
+# Hibari OS — Start a Gitea workflow now (workflow_dispatch)
 # ──────────────────────────────────────────────────────────────────────────────
 # Env: GITEA_URL (e.g. http://192.168.1.44:3000), GITEA_TOKEN (repo scope).
 #
 # Usage: nu scripts/gitea_run.nu <workflow>     e.g. deps-update | security | fuzz
 # ──────────────────────────────────────────────────────────────────────────────
 
-export const REPO = "Dodai-Tech/dodai-os"
+export const REPO = "Dodai-Tech/hibari-os"
 
 export def dispatch_url [base: string, workflow: string] {
     let file = if ($workflow | str ends-with ".yml") { $workflow } else { $"($workflow).yml" }

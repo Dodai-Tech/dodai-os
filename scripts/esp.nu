@@ -1,6 +1,6 @@
 #!/usr/bin/env nu
 # ──────────────────────────────────────────────────────────────────────────────
-# dodai-os — ESP firmware helpers (the justfile calls these)
+# hibari-os — ESP firmware helpers (the justfile calls these)
 # ──────────────────────────────────────────────────────────────────────────────
 # Firmware crates are not workspace members (they need the ESP toolchain), so their
 # generated files, flashing and backups live here, tested, instead of in sh recipes.
@@ -14,7 +14,7 @@
 const ROOT = path self ..
 
 # One record per firmware crate: crate, chip, target, flash_mb (written by the scaffold).
-export const FIRMWARE = [[crate, chip, target, flash_mb]; ["dodai-os-esp32s3", "esp32s3", "xtensa-esp32s3-espidf", 32]]
+export const FIRMWARE = [[crate, chip, target, flash_mb]; ["hibari-os-esp32s3", "esp32s3", "xtensa-esp32s3-espidf", 32]]
 
 # ── Pure helpers ──────────────────────────────────────────────────────────────
 

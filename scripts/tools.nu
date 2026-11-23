@@ -1,6 +1,6 @@
 #!/usr/bin/env nu
 # ──────────────────────────────────────────────────────────────────────────────
-# Dodai OS — Development tools: check or install
+# Hibari OS — Development tools: check or install
 # ──────────────────────────────────────────────────────────────────────────────
 # Usage:
 #   nu scripts/tools.nu check git-cliff     fail with an install hint if missing

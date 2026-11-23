@@ -1,5 +1,5 @@
 #!/usr/bin/env nu
-# ── Dodai OS · test_project.nu ──────────────────────────────────────
+# ── Hibari OS · test_project.nu ──────────────────────────────────────
 # scripts/project.nu must match the workspace: a stale list breaks a release.
 
 use std/assert

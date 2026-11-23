@@ -1,6 +1,6 @@
 #!/usr/bin/env nu
 # ──────────────────────────────────────────────────────────────────────────────
-# Dodai OS — Fuzz every cargo-fuzz target for a while (nightly toolchain)
+# Hibari OS — Fuzz every cargo-fuzz target for a while (nightly toolchain)
 # ──────────────────────────────────────────────────────────────────────────────
 # New targets are picked up automatically (cargo fuzz list). Stops at the first
 # crash; the reproducer is in fuzz/artifacts/<target>/.

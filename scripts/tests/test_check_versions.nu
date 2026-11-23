@@ -1,5 +1,5 @@
 #!/usr/bin/env nu
-# ── Dodai OS · test_check_versions.nu ───────────────────────────────────────
+# ── Hibari OS · test_check_versions.nu ───────────────────────────────────────
 
 use std/assert
 use runner.nu *

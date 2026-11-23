@@ -1,6 +1,6 @@
 #!/usr/bin/env nu
 # ──────────────────────────────────────────────────────────────────────────────
-# Dodai OS — Release notes
+# Hibari OS — Release notes
 # ──────────────────────────────────────────────────────────────────────────────
 # Writes RELEASE_NOTES.md for a tag: install instructions plus this release's
 # section of the changelog (git-cliff --latest; the workflow runs at the tag, so
@@ -31,12 +31,12 @@ export def install_lines []: nothing -> list<string> {
 # The notes text for `version` with the changelog section `changes`.
 export def notes [version: string, changes: string]: nothing -> string {
     [
-        $"# Dodai OS ($version)"
+        $"# Hibari OS ($version)"
         ""
-        $"Add it from crates.io \(docs: https://docs.rs/dodai-os-core/($version)\):"
+        $"Add it from crates.io \(docs: https://docs.rs/hibari-os-core/($version)\):"
         ""
         "```sh"
-        "cargo add dodai-os-core"
+        "cargo add hibari-os-core"
         "```"
         ""
         "## Changes"

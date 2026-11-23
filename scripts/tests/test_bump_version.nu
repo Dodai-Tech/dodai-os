@@ -1,5 +1,5 @@
 #!/usr/bin/env nu
-# ── Dodai OS · test_bump_version.nu ─────────────────────────────────
+# ── Hibari OS · test_bump_version.nu ─────────────────────────────────
 # Tests for the pure helpers of scripts/bump_version.nu.
 
 use std/assert
@@ -7,7 +7,7 @@ use runner.nu *
 use ../bump_version.nu [is_semver compare_versions set_workspace_version set_extension_version stageable]
 
 const CARGO = '[package]
-name = "dodai-os"
+name = "hibari-os"
 version.workspace = true
 
 [workspace.package]

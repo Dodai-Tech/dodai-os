@@ -1,6 +1,6 @@
 #!/usr/bin/env nu
 # ──────────────────────────────────────────────────────────────────────────────
-# Dodai OS — Merge Dependabot PRs once CI is green (auto-merge.yml, deps-update.yml)
+# Hibari OS — Merge Dependabot PRs once CI is green (auto-merge.yml, deps-update.yml)
 # ──────────────────────────────────────────────────────────────────────────────
 #   nu scripts/ci/auto_merge.nu <branch> <sha>   after CI: merge the Dependabot PR on
 #                                                <branch> if its head is still <sha>

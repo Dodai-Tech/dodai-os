@@ -1,5 +1,5 @@
 #!/usr/bin/env nu
-# ── Dodai OS · test_dev_scripts.nu ──────────────────────────────────
+# ── Hibari OS · test_dev_scripts.nu ──────────────────────────────────
 # The justfile's helpers: remotes, tools, Gitea dispatch, fuzzing.
 
 use std/assert

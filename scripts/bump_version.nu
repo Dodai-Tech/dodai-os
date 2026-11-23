@@ -1,6 +1,6 @@
 #!/usr/bin/env nu
 # ──────────────────────────────────────────────────────────────────────────────
-# Dodai OS — Bump the version
+# Hibari OS — Bump the version
 # ──────────────────────────────────────────────────────────────────────────────
 # Usage:
 #   nu scripts/bump_version.nu <new_version> [--yes] [--skip-checks] [--check]

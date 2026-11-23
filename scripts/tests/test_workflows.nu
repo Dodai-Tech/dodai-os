@@ -1,5 +1,5 @@
 #!/usr/bin/env nu
-# ── Dodai OS · test_workflows.nu ────────────────────────────────────
+# ── Hibari OS · test_workflows.nu ────────────────────────────────────
 # GitHub and Gitea run the same CI: every workflow exists on both hosts (except
 # GitHub's Dependabot auto-merge and Gitea's actions-update, its Dependabot
 # stand-in), the nightlies keep their schedules, the justfile can start each

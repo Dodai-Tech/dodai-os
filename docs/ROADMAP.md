@@ -5,24 +5,24 @@ of the design are in [ARCHITECTURE.md](ARCHITECTURE.md). Status: `[x]` done, `[ 
 
 ## Phase 0: foundation
 - [x] Repo, CI, release tooling (GitHub, Gitea, Codeberg), nushell scripts
-- [x] `dodai-os-core` (`no_std`): capabilities, touch gestures, `App` contract
-- [x] `dodai-os-hal` (`no_std`): display, touch, backlight, clock, board traits
+- [x] `hibari-os-core` (`no_std`): capabilities, touch gestures, `App` contract
+- [x] `hibari-os-hal` (`no_std`): display, touch, backlight, clock, board traits
 - [x] Architecture document, backup of the S3 board's native firmware
-- [x] `dodai-os-kernel` (`no_std`, no `unsafe`): static cooperative scheduler, message queues, capability table with delegation, fuzzed
-- [x] `dodai-os-shell-model` (`no_std`): launcher paging, hit testing, navigation, shared with Kawara
-- [x] `dodai-os-host`: device profiles (S3 AMOLED, round watch, P4 7in, headless, desktop), host clock and framebuffer display
+- [x] `hibari-os-kernel` (`no_std`, no `unsafe`): static cooperative scheduler, message queues, capability table with delegation, fuzzed
+- [x] `hibari-os-shell-model` (`no_std`): launcher paging, hit testing, navigation, shared with Kawara
+- [x] `hibari-os-host`: device profiles (S3 AMOLED, round watch, P4 7in, headless, desktop), host clock and framebuffer display
 
 ## Phase 1: first device, hosted preview (ESP32-S3 AMOLED 2.06)
-- [x] `dodai-os-shell`: launcher grid, status bar and app page drawn with `embedded-graphics` (`no_std`), adapts to screen size
-- [x] `dodai-os-host`: `--png` screenshots with `--tap`, and a `window` feature (minifb, mouse as touch)
+- [x] `hibari-os-shell`: launcher grid, status bar and app page drawn with `embedded-graphics` (`no_std`), adapts to screen size
+- [x] `hibari-os-host`: `--png` screenshots with `--tap`, and a `window` feature (minifb, mouse as touch)
 - [ ] Theme from `dodai-core` tokens instead of the built-in dark colors
 - [ ] Status bar content (time, WiFi, battery) and a swipe-down quick settings panel
 - [ ] Round-screen layout (clip the grid to the circle on `Shape::Round`)
 - [ ] Optional Slint view for rich UIs (Slint is GPL or commercial, so it stays opt-in, never the default)
-- [ ] Run apps as kernel tasks: shell and apps talk to services by message over `dodai-os-kernel`
-- [x] `dodai-os-drivers` (`no_std`, embedded-hal, host-tested with fake buses): CO5300 AMOLED and FT3168 touch
+- [ ] Run apps as kernel tasks: shell and apps talk to services by message over `hibari-os-kernel`
+- [x] `hibari-os-drivers` (`no_std`, embedded-hal, host-tested with fake buses): CO5300 AMOLED and FT3168 touch
 - [ ] Drivers: AXP2101 power, PCF85063 RTC, QMI8658 IMU
-- [x] `dodai-os-s3-amoled-206` on `esp-hal` (`no_std`, no ESP-IDF): QSPI bus with DMA, I2C, pins, framebuffer in PSRAM
+- [x] `hibari-os-s3-amoled-206` on `esp-hal` (`no_std`, no ESP-IDF): QSPI bus with DMA, I2C, pins, framebuffer in PSRAM
 - [x] Firmware boots from an OTA slot next to the native firmware (`just native-install`, `just native-restore`)
 - [ ] Confirm on the screen: launcher drawn correctly, taps and swipes work, even-aligned windows not needed
 - [ ] Apps: weather (`weathertrack-core`), clock, settings (WiFi, brightness, time, about)
@@ -32,17 +32,17 @@ of the design are in [ARCHITECTURE.md](ARCHITECTURE.md). Status: `[x]` done, `[ 
 The full plan, crate structure and decisions are in the Fusuma repository: `docs/ROADMAP.md`.
 - [x] Fusuma repo (`~/Projects/fusuma`): `fusuma-render` (the `Renderer` trait), `fusuma-render-embedded` (integer, `no_std`), `fusuma-render-vello-cpu` and `-vello-common` (`vello_cpu`), a shared conformance suite, fuzzed
 - [x] `fusuma-anim`: easing, tweens, keyframes, springs and fling decay in fixed point (`no_std`)
-- [x] `dodai-os-shell` draws through `fusuma-render`'s `Renderer`: the S3 uses the integer backend, the host can use the anti-aliased one
+- [x] `hibari-os-shell` draws through `fusuma-render`'s `Renderer`: the S3 uses the integer backend, the host can use the anti-aliased one
 - [x] Time-driven transitions in the shell (220 ms cubic ease-out)
 - [x] Fusuma 0.2.0 published (`fusuma-render`, `-embedded`, `-vello-common`, `-vello-cpu`, `-vello`, `fusuma-anim`); the host's `--renderer` is now `embedded` or `vello-cpu` (`fusuma-render-skia` 0.1.0 stays on crates.io, unmaintained)
 - [ ] Host: `--renderer vello-gpu` behind a `gpu` feature, using `fusuma-render-vello`
-- [x] `dodai-os-core` re-exports `fusuma-anim`; its own animation module is gone and the shell uses `fusuma-anim`'s `Tween` and `Easing`
+- [x] `hibari-os-core` re-exports `fusuma-anim`; its own animation module is gone and the shell uses `fusuma-anim`'s `Tween` and `Easing`
 - [ ] Spring-driven transitions: a spring needs per-frame state (stepped with the frame time), so `Ui::draw` stops being a pure function of the clock; design that together with the Fusuma animator, and with drag-to-swipe so a finger can pull a page
 - [x] `fusuma-render-vello` (GPU backend) exists and passes the conformance suite; effects (shadow, blur, gradients) and shaders come next as optional capabilities, and the shader engine reuses `dodai-ui-shaders`
 - [ ] Experiment: run `vello_cpu` on the S3 (it builds there with `libm`) and compare with the integer renderer
 - [ ] Fusuma toolkit: widget tree, `taffy` layout, events, text, widgets; rebuild the launcher and settings on them
 - [ ] `dodai-ui-fusuma`: Dodai UI for Fusuma, as one more `dodai-ui-<toolkit>` adapter, with a `ShaderView`
-- [ ] `fusuma-platform-mcu` (Dodai OS boards), `-desktop`, `-android`, `-ios`, `-tui`, and later `-web`
+- [ ] `fusuma-platform-mcu` (Hibari OS boards), `-desktop`, `-android`, `-ios`, `-tui`, and later `-web`
 - [ ] `dodai-ui-fx`: its `Painter` trait overlaps the `Renderer` of `fusuma-render`; draw effects through it
 - [ ] Measure the frame rate of a slide on the S3 and use partial updates if it is too low
 
@@ -52,9 +52,9 @@ The full plan, crate structure and decisions are in the Fusuma repository: `docs
 - [ ] Board profiles in TOML; the launcher lists only apps a board can run
 
 ## Phase 3: native kernel (standalone), RISC-V ESPs first
-- [x] `dodai-os-kernel` stage 1: cooperative scheduler, IPC, capabilities (host-testable)
+- [x] `hibari-os-kernel` stage 1: cooperative scheduler, IPC, capabilities (host-testable)
 - [ ] Kernel stage 2: timers, preemptive threads and per-task stacks behind the `Port` trait
-- [ ] `dodai-os-port-riscv32` (excluded crate, `unsafe` with safety comments): context switch, traps, PMP
+- [ ] `hibari-os-port-riscv32` (excluded crate, `unsafe` with safety comments): context switch, traps, PMP
 - [ ] QEMU RISC-V port in CI with a hello-world service
 - [ ] `esp-hal` + `esp-wifi` backend on the C6 and P4, replacing ESP-IDF
 - [ ] Xtensa port (S3) and Cortex-M port (RP2350, nRF52, STM32)
@@ -66,15 +66,15 @@ The full plan, crate structure and decisions are in the Fusuma repository: `docs
 - [ ] Standalone on x86_64 (QEMU `q35`): UEFI framebuffer, VirtIO, then real PCs
 
 ### Kawara track (the Dodai desktop environment, parallel to phase 4)
-- [x] `dodai-os-shell` split into `dodai-os-shell-model` (pure logic) and the view
-- [ ] Rename the shared model to a neutral `dodai-shell-model` when Kawara starts to use it
+- [x] `hibari-os-shell` split into `hibari-os-shell-model` (pure logic) and the view
+- [ ] Rename the shared model to a neutral `shell-model` when Kawara starts to use it
 - [ ] Wayland compositor prototype (Smithay), panel and launcher on the shell model
-- [ ] Session that starts from a display manager; settings app shared with Dodai OS
-- [ ] Own repos: `kawara`; `dodai-os` keeps only the portable crates
+- [ ] Session that starts from a display manager; settings app shared with Hibari OS
+- [ ] Own repos: `kawara`; `hibari-os` keeps only the portable crates
 
 ### Noren (the app store)
 - [ ] Catalogue and install logic, with a Fusuma front end; backends as separate crates (`noren-flatpak`, `noren-pacman`)
-- [ ] Research: apps for Dodai OS on microcontrollers (signed OTA images or sandboxed WebAssembly modules); apps are compiled in today
+- [ ] Research: apps for Hibari OS on microcontrollers (signed OTA images or sandboxed WebAssembly modules); apps are compiled in today
 - [ ] Open: publishing and review, signing, who may submit, paid apps
 
 ### Dodai Linux (Arch-based)
@@ -87,7 +87,7 @@ The full plan, crate structure and decisions are in the Fusuma repository: `docs
 - [ ] Hosted on Android and iOS as an app
 - [ ] Pick the first phone: the best-supported unlocked device in the owner's collection
       (probe with `adb` and `fastboot`; check the postmarketOS device tier)
-- [ ] Linux mode: Dodai as the userspace shell on that phone's kernel
+- [ ] Linux mode: Hibari as the userspace shell on that phone's kernel
 - [ ] Standalone own kernel on that phone: display, touch and storage first, radio later
 - [ ] Wearables: open or unlockable watches (Pine Time, Bangle.js and similar)
 

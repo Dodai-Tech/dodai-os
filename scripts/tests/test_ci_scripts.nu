@@ -1,5 +1,5 @@
 #!/usr/bin/env nu
-# ── Dodai OS · test_ci_scripts.nu ───────────────────────────────────
+# ── Hibari OS · test_ci_scripts.nu ───────────────────────────────────
 # The decisions the CI scripts make, without network, git or cargo.
 
 use std/assert

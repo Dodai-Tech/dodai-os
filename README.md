@@ -1,20 +1,24 @@
-# dodai-os
+# hibari-os
 
-[![CI](https://github.com/Dodai-Tech/dodai-os/actions/workflows/ci.yml/badge.svg)](https://github.com/Dodai-Tech/dodai-os/actions/workflows/ci.yml)
-[![Security](https://github.com/Dodai-Tech/dodai-os/actions/workflows/security.yml/badge.svg)](https://github.com/Dodai-Tech/dodai-os/actions/workflows/security.yml)
+[![CI](https://github.com/Dodai-Tech/hibari-os/actions/workflows/ci.yml/badge.svg)](https://github.com/Dodai-Tech/hibari-os/actions/workflows/ci.yml)
+[![Security](https://github.com/Dodai-Tech/hibari-os/actions/workflows/security.yml/badge.svg)](https://github.com/Dodai-Tech/hibari-os/actions/workflows/security.yml)
 [![MSRV](https://img.shields.io/badge/MSRV-1.90-blue.svg)](Cargo.toml)
-[![no_std](https://img.shields.io/badge/core-no__std-success.svg)](crates/dodai-os-core)
+[![no_std](https://img.shields.io/badge/core-no__std-success.svg)](crates/hibari-os-core)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-A small, portable app platform with its own microkernel, launcher and drivers for ESP-Rust boards,
-built to grow to other chips (ARM, x86) and devices. Dodai (土台) means foundation: the other layers
-of the Dodai family, [Fusuma](https://github.com/Dodai-Tech/fusuma) for the interface and
-[Dodai UI](https://github.com/Dodai-Tech/dodai-ui) for the design system, sit on it.
+**A thin operating system for ESP32 boards, written in Rust.** A launcher, touch input, drivers and
+an app model on `esp-hal`, with no ESP-IDF and a small footprint. Hibari (雲雀) is the skylark: small,
+fast and light. It is part of the Dodai family, next to
+[Fusuma](https://github.com/Dodai-Tech/fusuma) for the interface and
+[Dodai UI](https://github.com/Dodai-Tech/dodai-ui) for the design system.
 
-It runs today on the Waveshare ESP32-S3-Touch-AMOLED-2.06: a launcher with a status bar, an app
-grid, touch gestures and slide transitions, on `esp-hal` with no ESP-IDF. Everything that is not
-hardware is `no_std`, host-testable and fuzzed, and the shell also runs in a window or a PNG on your
-computer with the same code.
+It runs today on the **ESP32-S3** (Waveshare ESP32-S3-Touch-AMOLED-2.06): a launcher with a status
+bar, an app grid, touch gestures and slide transitions. The ESP32-C6 and ESP32-P4 are planned. WiFi,
+Bluetooth, storage and the other drivers are not written yet; see the [roadmap](docs/ROADMAP.md).
+Everything that is not hardware is `no_std`, host-testable and fuzzed, and the shell also runs in a
+window or a PNG on your computer with the same code.
+
+*Not affiliated with Espressif Systems. ESP32 is a trademark of Espressif Systems.*
 
 ## Docs
 
@@ -25,15 +29,15 @@ computer with the same code.
 
 | Crate | What | `no_std` |
 |---|---|---|
-| [`dodai-os-core`](crates/dodai-os-core) | capabilities, gestures, animation, the `App` contract | yes |
-| [`dodai-os-hal`](crates/dodai-os-hal) | `Display`, `Touch`, `Backlight`, `Clock`, `Board` traits | yes |
-| [`dodai-os-kernel`](crates/dodai-os-kernel) | cooperative scheduler, message queues, capability table | yes |
-| [`dodai-os-shell-model`](crates/dodai-os-shell-model) | launcher paging, hit testing, navigation | yes |
-| [`dodai-os-shell`](crates/dodai-os-shell) | the view: status bar, grid, slide transitions, via `fusuma-render` | yes |
-| [`dodai-os-drivers`](crates/dodai-os-drivers) | CO5300 display and FT3168 touch drivers | yes |
-| [`dodai-os-host`](crates/dodai-os-host) | the shell on a desktop: profiles, PNG, window | no |
-| [`dodai-os-s3-amoled-206`](crates/dodai-os-s3-amoled-206) | firmware for the Waveshare S3 AMOLED 2.06 (`esp-hal`) | yes |
-| [`dodai-os-esp32s3`](crates/dodai-os-esp32s3) | sample ESP-IDF firmware | no |
+| [`hibari-os-core`](crates/hibari-os-core) | capabilities, gestures, animation, the `App` contract | yes |
+| [`hibari-os-hal`](crates/hibari-os-hal) | `Display`, `Touch`, `Backlight`, `Clock`, `Board` traits | yes |
+| [`hibari-os-kernel`](crates/hibari-os-kernel) | cooperative scheduler, message queues, capability table | yes |
+| [`hibari-os-shell-model`](crates/hibari-os-shell-model) | launcher paging, hit testing, navigation | yes |
+| [`hibari-os-shell`](crates/hibari-os-shell) | the view: status bar, grid, slide transitions, via `fusuma-render` | yes |
+| [`hibari-os-drivers`](crates/hibari-os-drivers) | CO5300 display and FT3168 touch drivers | yes |
+| [`hibari-os-host`](crates/hibari-os-host) | the shell on a desktop: profiles, PNG, window | no |
+| [`hibari-os-s3-amoled-206`](crates/hibari-os-s3-amoled-206) | firmware for the Waveshare S3 AMOLED 2.06 (`esp-hal`) | yes |
+| [`hibari-os-esp32s3`](crates/hibari-os-esp32s3) | sample ESP-IDF firmware | no |
 
 The first seven are workspace members. The two firmware crates need the ESP toolchain, so they are
 excluded and built with their own `.cargo/config.toml` and `rust-toolchain.toml`. The renderer
@@ -53,9 +57,9 @@ just backup                 # save the board's native firmware before the first 
 just native-install         # build the esp-hal firmware, install it in OTA slot 0 and boot it
 just native-restore         # boot the native firmware again (erases only the otadata partition)
 just native-monitor         # serial monitor
-cargo run -p dodai-os-host -- --device s3-amoled-2.06 --tap 300,56 --at 60 --png shot.png
-cargo run -p dodai-os-host -- --device watch-round --renderer vello-cpu --png shot.png
-cargo run -p dodai-os-host --features window -- --device watch-round --window
+cargo run -p hibari-os-host -- --device s3-amoled-2.06 --tap 300,56 --at 60 --png shot.png
+cargo run -p hibari-os-host -- --device watch-round --renderer vello-cpu --png shot.png
+cargo run -p hibari-os-host --features window -- --device watch-round --window
 ```
 
 Probe the board first: `espflash board-info --port /dev/ttyACM0` (chip, revision, flash size must match the crate).

@@ -3,17 +3,17 @@ resolver = "3"
 # Only host-testable code is a workspace member. Firmware crates need the ESP toolchain and
 # their own .cargo/config.toml + rust-toolchain.toml, so they are excluded and build on their own.
 members = [
-    "crates/dodai-os-core",
-    "crates/dodai-os-hal",
-    "crates/dodai-os-kernel",
-    "crates/dodai-os-shell-model",
-    "crates/dodai-os-shell",
-    "crates/dodai-os-drivers",
-    "crates/dodai-os-host",
+    "crates/hibari-os-core",
+    "crates/hibari-os-hal",
+    "crates/hibari-os-kernel",
+    "crates/hibari-os-shell-model",
+    "crates/hibari-os-shell",
+    "crates/hibari-os-drivers",
+    "crates/hibari-os-host",
 ]
 exclude = [
-    "crates/dodai-os-esp32s3",
-    "crates/dodai-os-s3-amoled-206",
+    "crates/hibari-os-esp32s3",
+    "crates/hibari-os-s3-amoled-206",
 ]
 
 # One version for the core and the workspace; `just bump X.Y.Z` edits it. Firmware crates keep
@@ -24,13 +24,15 @@ edition = "2024"
 rust-version = "1.90"
 license = "MIT"
 authors = ["Sorin Albu-Irimies"]
-repository = "https://github.com/Dodai-Tech/dodai-os"
+keywords = ["esp32", "esp32s3", "esp-hal", "embedded", "no-std"]
+categories = ["embedded", "no-std", "os"]
+repository = "https://github.com/Dodai-Tech/hibari-os"
 
 [workspace.dependencies]
-dodai-os-core = { path = "crates/dodai-os-core", version = "0.1.0" }
-dodai-os-hal = { path = "crates/dodai-os-hal", version = "0.1.0" }
-dodai-os-shell-model = { path = "crates/dodai-os-shell-model", version = "0.1.0" }
-dodai-os-shell = { path = "crates/dodai-os-shell", version = "0.1.0" }
+hibari-os-core = { path = "crates/hibari-os-core", version = "0.1.0" }
+hibari-os-hal = { path = "crates/hibari-os-hal", version = "0.1.0" }
+hibari-os-shell-model = { path = "crates/hibari-os-shell-model", version = "0.1.0" }
+hibari-os-shell = { path = "crates/hibari-os-shell", version = "0.1.0" }
 embedded-hal = "1.0"
 embedded-graphics = "0.8.2"
 fusuma-anim = "0.2"

@@ -1,0 +1,23 @@
+[package]
+name = "hibari-os-core"
+description = "Hibari OS, a thin operating system for ESP32 boards, written in Rust: capabilities, gestures, animation and the App contract (no_std, host-testable)"
+readme = "README.md"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+keywords.workspace = true
+categories.workspace = true
+authors.workspace = true
+repository.workspace = true
+publish = false
+
+[lib]
+name = "hibari_os_core"
+path = "src/lib.rs"
+
+[dependencies]
+fusuma-anim.workspace = true
+
+[lints]
+workspace = true

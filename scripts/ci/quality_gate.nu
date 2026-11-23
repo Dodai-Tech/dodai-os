@@ -1,6 +1,6 @@
 #!/usr/bin/env nu
 # ──────────────────────────────────────────────────────────────────────────────
-# Dodai OS — Quality gate
+# Hibari OS — Quality gate
 # ──────────────────────────────────────────────────────────────────────────────
 # The same sequence locally (`just check-all`), in CI, in the nightly dependency
 # update and before a bump:
@@ -32,7 +32,7 @@ def run_step [label: string, cmd: closure]: nothing -> bool {
 }
 
 def main [--skip-fmt, --skip-test, --skip-nu] {
-    print $"(ansi cyan)══ Dodai OS — Quality Gate ══(ansi reset)"
+    print $"(ansi cyan)══ Hibari OS — Quality Gate ══(ansi reset)"
     mut ok = true
     if not $skip_fmt {
         $ok = (run_step "cargo fmt --all -- --check" { cargo fmt --all -- --check }) and $ok
