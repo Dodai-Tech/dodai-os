@@ -39,7 +39,8 @@ matters: each phase leaves something running on a real board. Status: `[x]` done
 ## Phase 3: more boards
 
 - [ ] **ESP32-P4 7 inch panel:** a `board.toml`, a board crate and drivers; run the Vello benchmark on it (400 MHz, FPU, vector extension)
-- [ ] **ESP32-C6, headless and small displays:** a `board.toml` without a screen, a terminal or serial front end (a Fusuma platform crate), background services; a small colour LCD works with the integer renderer
+- [x] **Measured Vello on an ESP32-C6** (`tools/bench-c6`, no screen needed): it runs up to about 240x240 on a 320 KB heap but is 10 to 20 times slower than the integer renderer and leaves 54 to 63 KB, so a C6 with a screen would have to give up the radio or use something lighter
+- [ ] **ESP32-C6 as a real board:** a `board.toml` for a specific board (the one tested is an unnamed 8 MB board), a terminal or serial front end for the headless case (a Fusuma platform crate), background services
 - [ ] **Host profiles from board files:** every real board's `board.toml` built into the host preview (the S3 is)
 - [ ] A JSON schema for `board.toml`, committed and checked
 

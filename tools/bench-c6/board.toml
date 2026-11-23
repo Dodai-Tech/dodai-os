@@ -1,0 +1,9 @@
+# An ESP32-C6 development board with 8 MB of flash, no screen and no PSRAM (read with `espflash board-info`;
+# the exact board model is not known). Used by the Vello benchmark, which needs only the chip.
+name = "esp32c6-8mb-headless"
+capabilities = ["wifi", "ble"]
+
+[firmware]
+chip = "esp32c6"
+target = "riscv32imac-unknown-none-elf"
+flash_mb = 8

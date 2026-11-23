@@ -80,7 +80,8 @@ GPU (a desktop, not an ESP). There is no integer renderer in the plan.
 | Board | Renderer | Note |
 |---|---|---|
 | ESP32-S3, ESP32-P4 (PSRAM, a screen) | `vello_cpu`, with partial redraws | needs PSRAM: a full 410x502 frame is about 1 MB, a card-sized region 200 to 230 KB |
-| Boards without PSRAM (ESP32-C6, ESP32) | none | not supported for rendering, except possibly a very small display (unmeasured) |
+| ESP32-C6 (no PSRAM, no FPU) | `vello_cpu`, small surfaces only | measured: runs up to about 240x240 with a 320 KB heap, 10 to 20 times slower than the integer renderer, and leaves 54 to 63 KB, probably too little for the radio |
+| ESP32 (original, usually no PSRAM) | not measured | |
 | Headless boards | none | a terminal or serial front end is planned in Fusuma |
 
 What I measured on the S3 (240 MHz, 8 MB PSRAM): `vello_cpu` builds `no_std` with `libm` and runs. A
@@ -88,7 +89,7 @@ full-screen launcher frame takes 267 ms through Fusuma's trait (the integer rend
 need partial redraws. A demo that repaints only the touched card (41 ms to render, 11 ms to send) felt richer
 and more responsive on the real screen. Until Fusuma has dirty-rectangle redraws and the integer renderer is
 removed, the shipping launcher still uses the integer renderer and repaints the whole screen. The P4 is
-untested. Numbers: `tools/bench-s3/RESULT.md`.
+untested. Numbers: `tools/bench-s3/RESULT.md`, and for the C6 `tools/bench-c6/RESULT.md`.
 
 A bug worth knowing: the CO5300 needs an explicit memory-write command after each address window. Without
 it a partial update lands in the wrong place and tears. Waveshare's own driver sends it; mine did not.

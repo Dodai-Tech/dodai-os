@@ -15,6 +15,7 @@ exclude = [
     "boards/esp32s3-idf",
     "tools/bench-s3",
     "tools/vello-demo-s3",
+    "tools/bench-c6",
 ]
 
 # One version for the workspace; `just bump X.Y.Z` edits it. Firmware crates keep

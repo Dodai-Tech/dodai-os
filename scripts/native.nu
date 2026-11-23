@@ -22,7 +22,7 @@ const ROOT = path self ..
 
 # What can be built for an ESP32 with esp-hal: name, directory, crate, and the directory whose `board.toml`
 # describes the device it runs on (chip, target and flash size are read from its [firmware] table).
-export const BOARDS = [[name, dir, crate, device]; ["s3-amoled-206", "boards/s3-amoled-206", "hibari-board-s3-amoled-206", "boards/s3-amoled-206"] ["s3-bench", "tools/bench-s3", "hibari-bench-s3", "boards/s3-amoled-206"] ["s3-vello-demo", "tools/vello-demo-s3", "hibari-demo-s3-vello", "boards/s3-amoled-206"]]
+export const BOARDS = [[name, dir, crate, device]; ["s3-amoled-206", "boards/s3-amoled-206", "hibari-board-s3-amoled-206", "boards/s3-amoled-206"] ["s3-bench", "tools/bench-s3", "hibari-bench-s3", "boards/s3-amoled-206"] ["s3-vello-demo", "tools/vello-demo-s3", "hibari-demo-s3-vello", "boards/s3-amoled-206"] ["c6-bench", "tools/bench-c6", "hibari-bench-c6", "tools/bench-c6"]]
 
 # ── Pure helpers ──────────────────────────────────────────────────────────────
 
