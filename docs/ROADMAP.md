@@ -38,12 +38,12 @@ The full plan, crate structure and decisions are in the Fusuma repository: `docs
 - [ ] Host: `--renderer vello-gpu` behind a `gpu` feature, using `fusuma-render-vello`
 - [x] `hibari-os-core` re-exports `fusuma-anim`; its own animation module is gone and the shell uses `fusuma-anim`'s `Tween` and `Easing`
 - [ ] Spring-driven transitions: a spring needs per-frame state (stepped with the frame time), so `Ui::draw` stops being a pure function of the clock; design that together with the Fusuma animator, and with drag-to-swipe so a finger can pull a page
-- [x] `fusuma-render-vello` (GPU backend) exists and passes the conformance suite; effects (shadow, blur, gradients) and shaders come next as optional capabilities, and the shader engine reuses `dodai-ui-shaders`
+- [x] `fusuma-render-vello` (GPU backend) exists and passes the conformance suite; effects (shadow, blur, gradients) and shaders come next as optional capabilities, and the shader engine reuses `dodai-shaders`
 - [ ] Experiment: run `vello_cpu` on the S3 (it builds there with `libm`) and compare with the integer renderer
 - [ ] Fusuma toolkit: widget tree, `taffy` layout, events, text, widgets; rebuild the launcher and settings on them
-- [ ] `dodai-ui-fusuma`: Dodai UI for Fusuma, as one more `dodai-ui-<toolkit>` adapter, with a `ShaderView`
+- [ ] `dodai-fusuma`: Dodai UI for Fusuma, as one more `dodai-<toolkit>` adapter, with a `ShaderView`
 - [ ] `fusuma-platform-mcu` (Hibari OS boards), `-desktop`, `-android`, `-ios`, `-tui`, and later `-web`
-- [ ] `dodai-ui-fx`: its `Painter` trait overlaps the `Renderer` of `fusuma-render`; draw effects through it
+- [ ] `dodai-fx`: its `Painter` trait overlaps the `Renderer` of `fusuma-render`; draw effects through it
 - [ ] Measure the frame rate of a slide on the S3 and use partial updates if it is too low
 
 ## Phase 2: more boards

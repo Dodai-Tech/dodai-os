@@ -34,8 +34,8 @@ hardware only through capabilities the shell grants.
 | `hibari-os-<chip>` | firmware (ESP-IDF today), excluded from the workspace | no |
 | `hibari-os-board-<name>` (planned) | one device: pins, drivers, capabilities | yes |
 
-Design tokens and themes come from `dodai-core` (the `dodai-ui` repo); the OS never reuses
-that name.
+Design tokens and themes come from `dodai-core` (in the `dodai-ui` repository); OS crates are
+`hibari-os-*`, so the names never collide.
 
 ## Products
 
@@ -65,18 +65,19 @@ name, so each can be used without the others.
 |---|---|---|---|
 | Foundation 土台 | OS with its own microkernel | **Hibari OS** (`hibari-os-*`) | this repo |
 | Sliding doors 襖 | UI toolkit and its renderer | **Fusuma** | OS-agnostic. Renderer: `fusuma-render` (the trait), `-embedded` (microcontrollers), `-vello-cpu` and later `-vello` (GPU); animation: `fusuma-anim`; widgets, layout, text, effects and shaders (`fusuma-*`) are planned. One repo, `fusuma`; apps depend on one `fusuma` crate and the backend is chosen by target. See its `docs/ROADMAP.md`. |
-| Finish | design system | **Dodai UI** (`dodai-ui-*`) | tokens, four designs, one adapter crate per toolkit, including `dodai-ui-fusuma` |
+| Finish | design system | **Dodai UI** (`dodai-*`) | tokens, four designs, one adapter crate per toolkit, including `dodai-fusuma` |
 | Roof tiles 瓦 | desktop and mobile environment | **Kawara** | Linux, Wayland. Planned. |
 | Shop curtain 暖簾 | app store | **Noren** | front end over Flatpak and pacman; a store for Hibari OS is research. Planned. |
 | The house | Arch-based distribution | **Dodai Linux** | ships Kawara and Noren. Planned. |
 
 Dependencies point one way: Hibari OS and Kawara use Fusuma, the toolkit crates use `fusuma-render`, and
-`fusuma-render*` knows nothing above it; a CI rule in the Fusuma repo enforces that. `dodai-ui-fusuma` uses Fusuma and the design tokens; Fusuma never imports
-`dodai-ui-*`.
+`fusuma-render*` knows nothing above it; a CI rule in the Fusuma repo enforces that. `dodai-fusuma` uses Fusuma and the design tokens; Fusuma never imports
+`dodai-*`.
 
 Naming rules:
-* `dodai-ui-<toolkit>` is a design-system adapter; `dodai-ui-<capability>` is toolkit-neutral.
-* `hibari-os-<role>` is the OS; `-core` always means the portable, UI-free heart of that product.
+* Design system (repository `dodai-ui`): `dodai-<toolkit>` is an adapter (`dodai-slint`, `dodai-iced`,
+  `dodai-fusuma`); `dodai-<capability>` is toolkit-neutral (`dodai-core`, `dodai-icons`, `dodai-shaders`).
+* `hibari-os-<role>` is the OS; `-core` means the portable, UI-free heart of that product.
 * Logic shared by Hibari OS and Kawara (the launcher model) gets a neutral name when Kawara starts
   (`hibari-os-shell-model` becomes a neutral `shell-model`), so neither product depends on the other.
 
