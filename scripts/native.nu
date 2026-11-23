@@ -10,8 +10,8 @@
 # 16 MB. `ota_1` at 0x1000000 is skipped by the bootloader, which falls back to the other slot.
 # An otadata entry with a wrong CRC makes the bootloader erase otadata and boot the factory app.
 #
-#   nu scripts/native.nu build   [--board s3-amoled-206]
-#   nu scripts/native.nu install [--board B] [--slot ota_0] [--port P]
+#   nu scripts/native.nu build   [--board s3-amoled-206] [--features render-skia]
+#   nu scripts/native.nu install [--board B] [--slot ota_0] [--port P] [--features F]
 #   nu scripts/native.nu native  [--port P]
 #   nu scripts/native.nu monitor [--port P]
 # ──────────────────────────────────────────────────────────────────────────────
@@ -117,17 +117,24 @@ def crate_dir [b: record]: nothing -> path { $ROOT | path join $b.dir }
 
 def elf_path [b: record]: nothing -> path { crate_dir $b | path join target $b.target release $b.crate }
 
-def "main build" [--board: string = "s3-amoled-206"] {
+# The cargo arguments for a comma or space separated list of features: `[--features a,b]`, or nothing.
+export def feature_args [features: string]: nothing -> list<string> {
+    let list = $features | split row --regex '[,\s]+' | where { |f| $f | is-not-empty }
+    if ($list | is-empty) { [] } else { ["--features" ($list | str join ",")] }
+}
+
+def "main build" [--board: string = "s3-amoled-206", --features: string = ""] {
     let b = board $board
     cd (crate_dir $b)
-    with-env (esp_env $nu.home-dir) { ^cargo build --release }
+    let extra = feature_args $features
+    with-env (esp_env $nu.home-dir) { ^cargo build --release ...$extra }
 }
 
 # Writes the image to an OTA slot and selects it. The bootloader and the partition table stay.
-def "main install" [--board: string = "s3-amoled-206", --slot: string = "ota_0", --port: string = ""] {
+def "main install" [--board: string = "s3-amoled-206", --slot: string = "ota_0", --port: string = "", --features: string = ""] {
     let b = board $board
     let seq = slot_seq $slot
-    main build --board $board
+    main build --board $board --features $features
     let image = mktemp --suffix .bin
     ^espflash save-image --chip $b.chip --flash-size $"($b.flash_mb)mb" (elf_path $b) $image
     let table_file = mktemp --suffix .bin

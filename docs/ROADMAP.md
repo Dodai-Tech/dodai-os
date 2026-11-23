@@ -18,6 +18,8 @@ matters: each phase leaves something running on a real board. Status: `[x]` done
 
 ## Phase 1: make the S3 board a device
 
+- [x] **A layered renderer choice** (`hibari_device::plan`, tested; `[render]` in `board.toml`, cargo features on the firmware, `--renderer` on the host; boot report). Not yet: the S3 firmware links only the integer renderer, so another choice is reported and the integer one draws
+- [ ] **Link the other backends into the S3 firmware** (`tiny-skia`, `vello_cpu` behind the `render-*` features), a runtime setting stored on the device, and measuring `tiny-skia` on the S3
 - [ ] **Vello on the S3 in the launcher (decided: Vello always, the integer renderer goes):** the `no_std` Vello backend exists in Fusuma (measured on the S3: 2 to 3 percent over raw `vello_cpu`, `tools/bench-s3/RESULT.md`, local path dependencies until it is released); what is left is dirty-rectangle redraws in the launcher (Fusuma's Phase 1b); the integer renderer repaints the whole screen in 61 ms, so slides run near 10 fps
 - [ ] **Verify on the screen:** swipes, page changes and app open and close, now that partial updates are fixed; the frame rate of a slide is unmeasured
 - [ ] **Drivers:** PCF85063 RTC, QMI8658 IMU, AXP2101 power and battery, the two buttons
@@ -55,12 +57,18 @@ matters: each phase leaves something running on a real board. Status: `[x]` done
 
 ## A flash and configuration wizard
 
+The first part exists: `hibari-device` has the hardware facts (`[hardware]`), the per-backend memory cost
+(`Backend::memory`), the layered choice (`plan`) and a one-line explanation of it, all with no UI, so a wizard
+is a front end over them. Not written: the wizard itself, the costs of features other than the renderer, and
+the flashing steps.
+
 A terminal (and later graphical) wizard that flashes Hibari onto a board and lets the user choose what goes
 in, within the limits of the hardware. Nothing is written; what it needs first:
 
-- [ ] **Hardware limits in `board.toml`:** RAM and PSRAM size, flash size and partition layout, whether there is an FPU, the radio, the screen; so the wizard can tell what fits
-- [ ] **A cost for every option:** flash and RAM each feature costs (the renderer, the radio, a service, an app), measured, so the wizard can add them up and refuse what does not fit
-- [ ] **The choices:** renderer, features (WiFi, Bluetooth, storage), apps, theme; defaults from the board
+- [x] **Hardware facts in `board.toml`:** `[hardware]` with RAM, PSRAM, FPU and GPU, validated, generated into the firmware's profile; partly done (flash size is in `[firmware]`, the partition layout and the radio's needs are not)
+- [ ] **A cost for every option:** the renderer's RAM is done (`Backend::memory`, from the benchmarks); flash size per backend, the radio, a service and an app are not measured, and the wizard needs them to add things up and refuse what does not fit
+- [x] **The renderer choice with defaults from the board** (`plan`: build, board file, automatic rule, memory check, what is built in)
+- [ ] **The other choices:** features (WiFi, Bluetooth, storage), apps, theme
 - [ ] **Backup, flash and restore:** back up what is on the board first (as `just backup` does), flash into an OTA slot next to the native firmware, and offer to restore
 - [ ] **Build or download:** build the chosen set from source, or fetch a prebuilt image for known combinations
 - [ ] A text-mode interface (ratatui) first, a graphical one later on Fusuma

@@ -73,7 +73,7 @@ just native-restore         # boot the native firmware again (erases only the ot
 just native-monitor         # serial monitor
 cargo run -p hibari-host -- --list
 cargo run -p hibari-host -- --device waveshare-s3-amoled-2.06 --tap 300,56 --at 60 --png shot.png
-cargo run -p hibari-host -- --device watch-round --renderer vello-cpu --png shot.png
+cargo run -p hibari-host -- --device watch-round --renderer vello-cpu --png shot.png   # --renderer auto is the default
 cargo run -p hibari-host --features window -- --device watch-round --window
 ```
 

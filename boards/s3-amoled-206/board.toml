@@ -15,3 +15,17 @@ offset = [22, 0]
 chip = "esp32s3"
 target = "xtensa-esp32s3-none-elf"
 flash_mb = 32
+
+# What the chip has. The renderer choice (hibari_device::choose) reads this. 8 MB of PSRAM is on this board;
+# the 512 KB of internal RAM and the single-precision FPU are the ESP32-S3's datasheet values as I remember
+# them, not measured here.
+[hardware]
+ram_kb = 512
+psram_kb = 8192
+fpu = true
+gpu = false
+
+# Uncomment to pin a renderer for this board; leave it out for the automatic choice.
+# [render]
+# backend = "vello-cpu"   # integer, skia, vello-cpu or vello-gpu
+# fallback = false        # true: step down to a lighter backend if the chosen one does not fit

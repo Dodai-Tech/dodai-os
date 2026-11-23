@@ -9,7 +9,7 @@ extern crate alloc;
 
 
 use alloc::vec;
-use hibari_board_s3_amoled_206::{DISPLAY, LCD_QSPI_MHZ, PROFILE, qspi};
+use hibari_board_s3_amoled_206::{BUILD_BACKEND, DISPLAY, LCD_QSPI_MHZ, LINKED, PROFILE, qspi};
 use hibari_device::CapabilitySet;
 use hibari_drivers::{co5300::Co5300, ft3168::Ft3168};
 use hibari_hal::input::GestureRecognizer;
@@ -72,6 +72,11 @@ fn main() -> ! {
     esp_alloc::psram_allocator!(peripherals.PSRAM, esp_hal::psram);
     esp_println::logger::init_logger_from_env();
     log::info!("Hibari OS on {}", PROFILE.name);
+    // Which renderer, and why: the build, the board file or the automatic rule, then what is linked.
+    match hibari_device::plan(&PROFILE, BUILD_BACKEND, &LINKED) {
+        Some(plan) => log::info!("renderer: {plan}"),
+        None => log::warn!("renderer: nothing to draw with"),
+    }
 
     let delay = Delay::new();
 

@@ -14,6 +14,15 @@ name = "hibari-board-s3-amoled-206"
 path = "src/main.rs"
 test = false
 
+[features]
+# Ask the build for a renderer. With none of these the board file or the automatic rule decides. If several
+# are on, the lightest wins. This firmware links only the integer backend today, so another choice is
+# reported at boot and drawn with the integer one.
+render-integer = []
+render-skia = []
+render-vello-cpu = []
+render-vello-gpu = []
+
 [dependencies]
 hibari-device = { path = "../../crates/hibari-device" }
 hibari-hal = { path = "../../crates/hibari-hal" }

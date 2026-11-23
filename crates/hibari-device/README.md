@@ -19,11 +19,24 @@ offset = [22, 0]          # columns and rows before the visible area in the pane
 chip = "esp32s3"
 target = "xtensa-esp32s3-none-elf"
 flash_mb = 32
+
+[hardware]                # what the chip has; the renderer choice reads it
+ram_kb = 512
+psram_kb = 8192
+fpu = true
+
+[render]                  # optional: pin a backend (integer, skia, vello-cpu, vello-gpu)
+backend = "vello-cpu"
+fallback = true           # step down if it does not fit
 ```
 
 * `Capability`, `CapabilitySet`: what a device offers and what an app needs (`const`, one `u16`).
 * `DeviceProfile`, `DisplayInfo`, `Shape`, `Firmware`: the device, with `validate()` (a screen and the
   `display` capability go together, a touch panel needs a screen).
+* `Backend`, `Hardware`, `Render`, `choose`, `check`, `plan`: which renderer a device draws with. A
+  `[hardware]` table (RAM, PSRAM, FPU, GPU) and an optional `[render]` table feed it; the layers are the
+  build, the board file and an automatic rule, followed by a memory check and what is built in, and `Display`
+  on a `Plan` says why in one line.
 * With the `toml` feature (tools and build scripts only): `DeviceProfile::from_toml` rejects unknown
   fields and capabilities with a message, and `to_rust` writes the profile out as a `const`.
 

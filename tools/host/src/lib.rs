@@ -15,7 +15,7 @@ use embedded_graphics::{
 use fusuma_render::Renderer;
 use fusuma_render_embedded::Embedded;
 pub use hibari_device::DeviceProfile;
-use hibari_device::{Capability, CapabilitySet, Shape};
+use hibari_device::{Backend, Capability, CapabilitySet, Plan, Shape};
 use hibari_hal::input::{Gesture, GestureRecognizer, Phase, Point, TouchEvent};
 use hibari_hal::{Clock, Display, Rect};
 use hibari_launcher::{AppInfo, Output, Ui};
@@ -54,6 +54,18 @@ pub fn profiles() -> &'static [DeviceProfile] {
 #[must_use]
 pub fn profile(name: &str) -> Option<&'static DeviceProfile> {
     profiles().iter().find(|p| p.name == name)
+}
+
+/// The backends built into the host: the integer one and `vello_cpu`. `tiny-skia` and the GPU backend are
+/// not linked here, so a choice of one of them is drawn with the nearest one that is.
+pub const BUILT_IN: [Backend; 2] = [Backend::Integer, Backend::VelloCpu];
+
+/// Plans how to draw `profile`: the build's choice (`requested`, a flag here) beats the board file, which
+/// beats the automatic rule, then the memory check, then what the host has. `None` for a device without a
+/// screen.
+#[must_use]
+pub fn plan(profile: &DeviceProfile, requested: Option<Backend>) -> Option<Plan> {
+    hibari_device::plan(profile, requested, &BUILT_IN)
 }
 
 /// The monotonic host clock.
@@ -352,6 +364,7 @@ pub fn png_vello_cpu(session: &Session) -> Result<Vec<u8>, String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use hibari_device::Fit;
     use hibari_launcher::SLIDE_MS;
 
     #[test]
@@ -376,6 +389,84 @@ mod tests {
             Some((1024, 600))
         );
         assert_eq!(profile("nope"), None);
+    }
+
+    #[test]
+    fn each_device_draws_with_the_backend_its_hardware_suggests() {
+        let want = [
+            ("waveshare-s3-amoled-2.06", Backend::VelloCpu),
+            ("watch-round", Backend::VelloCpu),
+            ("p4-7in", Backend::VelloCpu),
+            ("desktop", Backend::VelloGpu),
+        ];
+        for (name, backend) in want {
+            let p = plan(profile(name).unwrap(), None).unwrap();
+            assert_eq!(p.choice.backend, backend, "{name}");
+            assert!(
+                matches!(p.choice.reason, hibari_device::Reason::Automatic(_)),
+                "{name}"
+            );
+            assert_eq!(p.fit, Fit::Fits, "{name}");
+        }
+        assert_eq!(
+            plan(profile("headless").unwrap(), None),
+            None,
+            "no screen, no renderer"
+        );
+    }
+
+    #[test]
+    fn what_the_host_cannot_draw_with_is_said_and_replaced() {
+        let desktop = plan(profile("desktop").unwrap(), None).unwrap();
+        assert_eq!(
+            (desktop.choice.backend, desktop.uses),
+            (Backend::VelloGpu, Backend::VelloCpu)
+        );
+        assert!(
+            desktop
+                .to_string()
+                .contains("vello-gpu is not built in, using vello-cpu")
+        );
+        let skia = plan(profile("watch-round").unwrap(), Some(Backend::Skia)).unwrap();
+        assert_eq!(
+            (skia.choice.reason, skia.uses),
+            (hibari_device::Reason::Build, Backend::Integer)
+        );
+        assert!(
+            skia.to_string()
+                .contains("skia is not built in, using integer"),
+            "down first: the safe direction"
+        );
+        let integer = plan(profile("watch-round").unwrap(), Some(Backend::Integer)).unwrap();
+        assert_eq!(integer.uses, Backend::Integer);
+        assert!(
+            !integer.to_string().contains("not built in"),
+            "nothing to say when it is just what was asked for"
+        );
+        let s3 = plan(profile("waveshare-s3-amoled-2.06").unwrap(), None).unwrap();
+        assert_eq!(
+            s3.to_string(),
+            "vello-cpu (automatic: PSRAM holds a Vello frame twice over)"
+        );
+    }
+
+    #[test]
+    fn a_choice_that_does_not_fit_is_reported() {
+        const TIGHT: &str = "name = \"tight\"\ncapabilities = [\"display\"]\n[display]\nwidth = 240\nheight = 320\n[hardware]\nram_kb = 512\n[render]\nbackend = \"vello-cpu\"\n";
+        let p = DeviceProfile::from_toml(TIGHT).unwrap();
+        let plan = plan(&p, None).unwrap();
+        assert!(matches!(plan.fit, Fit::TooBig { .. }));
+        assert!(plan.to_string().contains("fallback = true"));
+        // The profile borrows its text for the whole program, so the test leaks it.
+        let relaxed_text: &'static str = Box::leak(
+            TIGHT
+                .replace("vello-cpu\"", "vello-cpu\"\nfallback = true")
+                .into_boxed_str(),
+        );
+        let relaxed = DeviceProfile::from_toml(relaxed_text).unwrap();
+        let plan = super::plan(&relaxed, None).unwrap();
+        assert_eq!(plan.choice.backend, Backend::Integer);
+        assert!(plan.to_string().contains("fell back to integer"));
     }
 
     #[test]

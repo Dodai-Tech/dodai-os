@@ -3,7 +3,7 @@
 
 use std/assert
 use runner.nu *
-use ../native.nu [BOARDS board firmware_of crc32 le_bytes otadata_entry slot_seq partition check_fits esp_env]
+use ../native.nu [BOARDS board firmware_of feature_args crc32 le_bytes otadata_entry slot_seq partition check_fits esp_env]
 
 def "test native: known boards are found with their firmware settings, unknown ones are errors" [] {
     for b in $BOARDS {
@@ -91,6 +91,15 @@ def "test native: a missing toolchain is a clear error" [] {
     let msg = try { esp_env $home; "" } catch {|e| $e.msg }
     assert ($msg | str contains "espup install")
     rm -rf $home
+}
+
+def "test native: cargo features are passed through, in any list format" [] {
+    assert equal (feature_args "") []
+    assert equal (feature_args "   ") []
+    assert equal (feature_args "render-skia") ["--features" "render-skia"]
+    assert equal (feature_args "a,b") ["--features" "a,b"]
+    assert equal (feature_args "a b , c") ["--features" "a,b,c"]
+    assert equal (feature_args ",,a,,") ["--features" "a"]
 }
 
 def main [] { run-tests }

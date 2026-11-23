@@ -5,7 +5,10 @@ use std::vec::Vec;
 
 use serde::Deserialize;
 
-use crate::{Capability, CapabilitySet, DeviceProfile, DisplayInfo, Firmware, ProfileError, Shape};
+use crate::{
+    Backend, Capability, CapabilitySet, DeviceProfile, DisplayInfo, Firmware, Hardware,
+    ProfileError, Render, Shape,
+};
 
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -15,6 +18,28 @@ struct RawProfile<'a> {
     capabilities: Vec<&'a str>,
     display: Option<RawDisplay<'a>>,
     firmware: Option<RawFirmware<'a>>,
+    hardware: Option<RawHardware>,
+    render: Option<RawRender<'a>>,
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct RawHardware {
+    ram_kb: u32,
+    #[serde(default)]
+    psram_kb: u32,
+    #[serde(default)]
+    fpu: bool,
+    #[serde(default)]
+    gpu: bool,
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct RawRender<'a> {
+    backend: Option<&'a str>,
+    #[serde(default)]
+    fallback: bool,
 }
 
 #[derive(Deserialize)]
@@ -57,6 +82,16 @@ impl DeviceProfile {
     /// chip = "esp32s3"
     /// target = "xtensa-esp32s3-none-elf"
     /// flash_mb = 32
+    ///
+    /// [hardware]          # what the chip has; the renderer choice reads it
+    /// ram_kb = 512
+    /// psram_kb = 8192     # default 0
+    /// fpu = true          # default false
+    /// gpu = false         # default false
+    ///
+    /// [render]            # optional
+    /// backend = "skia"    # integer, skia, vello-cpu or vello-gpu; default: automatic
+    /// fallback = true     # step down to a lighter backend if this one does not fit; default false
     /// ```
     ///
     /// # Errors
@@ -104,11 +139,37 @@ impl DeviceProfile {
             target: f.target,
             flash_mb: f.flash_mb,
         });
+        let hardware = raw.hardware.map(|h| Hardware {
+            ram_kb: h.ram_kb,
+            psram_kb: h.psram_kb,
+            fpu: h.fpu,
+            gpu: h.gpu,
+        });
+        let render = match raw.render {
+            None => Render::default(),
+            Some(r) => Render {
+                backend: r
+                    .backend
+                    .map(|name| {
+                        Backend::from_name(name).ok_or_else(|| {
+                            let known: Vec<&str> = Backend::ALL.iter().map(|b| b.name()).collect();
+                            bad(std::format!(
+                                "unknown render backend '{name}'; known: {}",
+                                known.join(", ")
+                            ))
+                        })
+                    })
+                    .transpose()?,
+                fallback: r.fallback,
+            },
+        };
         let profile = Self {
             name: raw.name,
             display,
             capabilities,
             firmware,
+            hardware,
+            render,
         };
         profile.validate()?;
         Ok(profile)
@@ -143,10 +204,25 @@ impl DeviceProfile {
                 f.flash_mb
             ),
         };
+        let hardware = match self.hardware {
+            None => String::from("None"),
+            Some(h) => std::format!(
+                "Some(hibari_device::Hardware {{ ram_kb: {}, psram_kb: {}, fpu: {}, gpu: {} }})",
+                h.ram_kb,
+                h.psram_kb,
+                h.fpu,
+                h.gpu
+            ),
+        };
+        let backend = match self.render.backend {
+            None => String::from("None"),
+            Some(b) => std::format!("Some(hibari_device::Backend::{})", b.variant()),
+        };
         std::format!(
-            "pub const {const_name}: hibari_device::DeviceProfile = hibari_device::DeviceProfile {{\n    name: {:?},\n    display: {display},\n    capabilities: hibari_device::CapabilitySet::of(&[{}]),\n    firmware: {firmware},\n}};\n",
+            "pub const {const_name}: hibari_device::DeviceProfile = hibari_device::DeviceProfile {{\n    name: {:?},\n    display: {display},\n    capabilities: hibari_device::CapabilitySet::of(&[{}]),\n    firmware: {firmware},\n    hardware: {hardware},\n    render: hibari_device::Render {{ backend: {backend}, fallback: {} }},\n}};\n",
             self.name,
-            caps.join(", ")
+            caps.join(", "),
+            self.render.fallback
         )
     }
 }
@@ -270,6 +346,113 @@ flash_mb = 32
                 && plain.contains("firmware: None")
                 && plain.contains("CapabilitySet::of(&[])")
         );
+    }
+
+    const WITH_RENDER: &str = r#"
+name = "r"
+capabilities = ["display"]
+
+[display]
+width = 160
+height = 160
+
+[hardware]
+ram_kb = 512
+
+[render]
+backend = "skia"
+fallback = true
+"#;
+
+    #[test]
+    fn hardware_and_render_tables_are_read_with_defaults() {
+        let p = DeviceProfile::from_toml(WITH_RENDER).unwrap();
+        assert_eq!(
+            p.hardware,
+            Some(Hardware {
+                ram_kb: 512,
+                psram_kb: 0,
+                fpu: false,
+                gpu: false
+            })
+        );
+        assert_eq!(
+            p.render,
+            Render {
+                backend: Some(Backend::Skia),
+                fallback: true
+            }
+        );
+        let none = DeviceProfile::from_toml("name = \"n\"\n").unwrap();
+        assert_eq!((none.hardware, none.render), (None, Render::default()));
+        let only_fallback = DeviceProfile::from_toml("name = \"n\"\ncapabilities = [\"display\"]\n[display]\nwidth = 5\nheight = 5\n[render]\nfallback = true\n").unwrap();
+        assert_eq!(
+            only_fallback.render,
+            Render {
+                backend: None,
+                fallback: true
+            }
+        );
+    }
+
+    #[test]
+    fn bad_render_and_hardware_tables_say_what_is_wrong() {
+        let screen = "capabilities = [\"display\"]\n[display]\nwidth = 5\nheight = 5\n";
+        let with = |extra: &str| -> String {
+            let text: &'static str = std::boxed::Box::leak(
+                std::format!("name = \"x\"\n{screen}{extra}").into_boxed_str(),
+            );
+            DeviceProfile::from_toml(text).unwrap_err().to_string()
+        };
+        assert!(with("[render]\nbackend = \"gpu\"\n").contains("unknown render backend 'gpu'"));
+        assert!(
+            with("[render]\nbackend = \"gpu\"\n").contains("vello-cpu"),
+            "the known names are listed"
+        );
+        assert!(with("[render]\nbogus = 1\n").contains("bogus"));
+        assert!(with("[hardware]\nram_kb = 0\n").contains("ram_kb"));
+        assert!(
+            with("[hardware]\npsram_kb = 4\n").contains("ram_kb"),
+            "ram_kb is required"
+        );
+        assert!(with("[hardware]\nram_kb = 512\ncpu = 1\n").contains("cpu"));
+        let headless = "name = \"h\"\ncapabilities = [\"wifi\"]\n[render]\nbackend = \"skia\"\n";
+        assert!(
+            DeviceProfile::from_toml(headless)
+                .unwrap_err()
+                .to_string()
+                .contains("[render] needs a [display]")
+        );
+    }
+
+    #[test]
+    fn generated_source_carries_hardware_and_render() {
+        let src = DeviceProfile::from_toml(WITH_RENDER).unwrap().to_rust("P");
+        for want in [
+            "hardware: Some(hibari_device::Hardware { ram_kb: 512, psram_kb: 0, fpu: false, gpu: false })",
+            "render: hibari_device::Render { backend: Some(hibari_device::Backend::Skia), fallback: true }",
+        ] {
+            assert!(src.contains(want), "{want}\n{src}");
+        }
+        let plain = DeviceProfile::from_toml("name = \"b\"\n")
+            .unwrap()
+            .to_rust("B");
+        assert!(
+            plain.contains("hardware: None")
+                && plain
+                    .contains("render: hibari_device::Render { backend: None, fallback: false }")
+        );
+    }
+
+    #[test]
+    fn the_real_s3_board_chooses_what_was_measured_to_suit_it() {
+        let p = DeviceProfile::from_toml(include_str!("../../../boards/s3-amoled-206/board.toml"))
+            .unwrap();
+        assert_eq!(p.hardware.unwrap().psram_kb, 8192);
+        let c = crate::choose(&p, None).unwrap();
+        assert_eq!(c.backend, Backend::VelloCpu);
+        assert!(matches!(c.reason, crate::Reason::Automatic(_)));
+        assert_eq!(crate::check(&p, c).1, crate::Fit::Fits);
     }
 
     /// The device files of this repository, which the firmware and the host both load.

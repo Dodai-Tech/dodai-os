@@ -6,3 +6,9 @@ capabilities = ["display", "touch", "button", "ble", "battery", "imu", "storage"
 width = 466
 height = 466
 shape = "round"
+
+# A round smartwatch class: an ESP32-S3 with PSRAM.
+[hardware]
+ram_kb = 512
+psram_kb = 8192
+fpu = true

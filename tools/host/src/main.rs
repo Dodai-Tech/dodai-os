@@ -2,29 +2,21 @@
 //!
 //! ```text
 //! hibari-host --list
-//! hibari-host --device watch-round --png out.png [--tap X,Y]... [--renderer embedded|vello-cpu] [--at MS]
+//! hibari-host --device watch-round --png out.png [--tap X,Y]... [--renderer auto|integer|skia|vello-cpu|vello-gpu] [--at MS]
 //! hibari-host --device p4-7in --window        (needs --features window)
 //! ```
 
 use std::process::ExitCode;
 
-use hibari_host::{Session, png_bytes, png_vello_cpu, profile as find_profile, profiles};
-
-/// Which Fusuma renderer backend draws the PNG.
-#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
-enum Backend {
-    /// The integer backend the boards use, on a 16-bit framebuffer.
-    #[default]
-    Embedded,
-    /// The anti-aliased backend.
-    VelloCpu,
-}
+use hibari_device::Backend;
+use hibari_host::{Session, plan, png_bytes, png_vello_cpu, profile as find_profile, profiles};
 
 #[derive(Debug, Default, PartialEq, Eq)]
 struct Options {
     list: bool,
     device: Option<String>,
-    renderer: Backend,
+    /// The renderer asked for on the command line; `None` is the automatic choice.
+    renderer: Option<Backend>,
     /// Milliseconds after the last tap at which the picture is taken (default: settled).
     at: Option<u32>,
     png: Option<String>,
@@ -62,12 +54,14 @@ fn parse(args: impl IntoIterator<Item = String>) -> Result<Options, String> {
                 );
             }
             "--renderer" => {
-                o.renderer = match value("--renderer")?.as_str() {
-                    "embedded" => Backend::Embedded,
-                    "vello-cpu" => Backend::VelloCpu,
-                    other => {
-                        return Err(format!("unknown renderer '{other}'; embedded or vello-cpu"));
-                    }
+                let name = value("--renderer")?;
+                o.renderer = match name.as_str() {
+                    "auto" => None,
+                    // The old name of the integer backend.
+                    "embedded" => Some(Backend::Integer),
+                    other => Some(Backend::from_name(other).ok_or_else(|| {
+                        format!("unknown renderer '{other}'; auto, integer, skia, vello-cpu or vello-gpu")
+                    })?),
                 }
             }
             "--tap" => o.taps.push(parse_tap(&value("--tap")?)?),
@@ -96,9 +90,11 @@ fn run(o: &Options) -> Result<(), String> {
     // Let the last slide run to the requested time; 1000 ms is long past any transition.
     session.advance(o.at.unwrap_or(1000));
     if let Some(path) = &o.png {
-        let bytes = match o.renderer {
-            Backend::Embedded => png_bytes(session.display()).map_err(|e| e.to_string())?,
-            Backend::VelloCpu => png_vello_cpu(&session)?,
+        let plan = plan(profile, o.renderer).ok_or_else(|| format!("'{name}' has no screen"))?;
+        eprintln!("renderer: {plan}");
+        let bytes = match plan.uses {
+            Backend::Integer => png_bytes(session.display()).map_err(|e| e.to_string())?,
+            _ => png_vello_cpu(&session)?,
         };
         std::fs::write(path, bytes).map_err(|e| format!("{path}: {e}"))?;
         eprintln!("wrote {path}");
@@ -146,13 +142,19 @@ mod tests {
     }
 
     #[test]
-    fn the_renderer_defaults_to_the_boards_and_can_be_chosen() {
-        assert_eq!(
-            parse(args("--png a.png")).unwrap().renderer,
-            Backend::Embedded
-        );
-        let o = parse(args("--renderer vello-cpu")).unwrap();
-        assert_eq!(o.renderer, Backend::VelloCpu);
+    fn the_renderer_is_automatic_unless_chosen() {
+        assert_eq!(parse(args("--png a.png")).unwrap().renderer, None);
+        assert_eq!(parse(args("--renderer auto")).unwrap().renderer, None);
+        for (flag, want) in [
+            ("integer", Backend::Integer),
+            ("embedded", Backend::Integer),
+            ("skia", Backend::Skia),
+            ("vello-cpu", Backend::VelloCpu),
+            ("vello-gpu", Backend::VelloGpu),
+        ] {
+            let o = parse(args(&format!("--renderer {flag}"))).unwrap();
+            assert_eq!(o.renderer, Some(want), "{flag}");
+        }
         assert!(parse(args("--renderer vello")).is_err());
         assert!(parse(args("--renderer")).is_err());
     }
@@ -161,7 +163,7 @@ mod tests {
     fn both_renderers_write_a_png() {
         let dir = std::env::temp_dir().join(format!("hibari-host-{}", std::process::id()));
         std::fs::create_dir_all(&dir).unwrap();
-        for backend in ["embedded", "vello-cpu"] {
+        for backend in ["integer", "vello-cpu", "auto", "skia"] {
             let path = dir.join(format!("{backend}.png"));
             let cmd = format!(
                 "--device watch-round --renderer {backend} --tap 200,150 --png {}",

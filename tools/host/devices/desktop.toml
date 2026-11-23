@@ -6,3 +6,9 @@ capabilities = ["display", "touch", "wifi", "storage"]
 width = 1280
 height = 800
 shape = "rect"
+
+# A computer: plenty of memory and a GPU.
+[hardware]
+ram_kb = 8000000
+fpu = true
+gpu = true

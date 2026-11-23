@@ -83,14 +83,31 @@ hardware, and the others stay available.
 | `fusuma-render-vello-cpu` | the richest (blur, layers, glyph runs, Lottie later); same engine as the GPU | slowest and heaviest on a small chip |
 | `fusuma-render-vello` (GPU) | for a desktop or phone with a usable GPU | needs `wgpu` and a GPU |
 
-Defaults by hardware (a proposal, to be written into `board.toml`; none of it is automatic yet):
+### How a device picks one
 
-| Board | Default | Also available |
-|---|---|---|
-| ESP32-S3 or P4 with PSRAM and a screen | `vello_cpu` with partial redraws | `tiny-skia`, integer |
-| ESP32-C6 and other chips without PSRAM | `tiny-skia`, or the integer renderer when the radio needs the RAM | `vello_cpu` for small surfaces |
-| Desktop or phone | `vello` (GPU) when `gpu_available()`, else `vello_cpu` | the rest |
-| Headless | none | a terminal front end (planned in Fusuma) |
+`hibari_device::plan` decides, in layers, strongest first:
+
+1. **The build:** a cargo feature on the firmware (`render-integer`, `render-skia`, `render-vello-cpu`,
+   `render-vello-gpu`; `just native-install features=render-skia`) or `--renderer` on the host tool.
+2. **The board file:** `[render] backend = "skia"` in `board.toml`, with `fallback = true` to step down to a
+   lighter backend if the chosen one does not fit in memory.
+3. **The automatic rule**, over the `[hardware]` table (`ram_kb`, `psram_kb`, `fpu`, `gpu`): a GPU gives the GPU
+   backend; PSRAM that holds a Vello frame twice over gives `vello_cpu`; otherwise `tiny-skia` if its frame fits
+   in the memory budget, else the integer renderer. The budget is the PSRAM plus 40 percent of the internal RAM
+   (`RAM_SHARE_PERCENT`; an assumption, since what the radio needs is not measured).
+
+Then a **memory check** (an explicit choice that does not fit is kept and warned about unless `fallback = true`)
+and **what is built in**: a choice that is not linked is replaced by the nearest lighter backend that is, and
+the reason is logged: `renderer: integer (automatic: PSRAM holds a Vello frame twice over); vello-cpu is not
+built in, using integer`. The memory per backend comes from the measurements (`Backend::memory`: 2, 4 and about
+4.8 bytes per pixel).
+
+What this means today: the host links the integer and `vello_cpu` backends; the S3 firmware links only the
+integer one, so on the board the choice is reported at boot but the integer renderer draws. Linking the others
+into the firmware is the next step, and then the same feature or board setting picks which.
+
+The same data and the same function are what a flashing wizard (text or graphical) needs: it reads a board's
+hardware, shows the automatic choice and its cost, and lets the user override it within the limits.
 
 What I measured. On the ESP32-S3 (240 MHz, 8 MB PSRAM): `vello_cpu` is about 4 times slower than the integer
 renderer for a full frame (267 against 61 ms for 410x502) and needs about 1 MB; a demo that repainted only the

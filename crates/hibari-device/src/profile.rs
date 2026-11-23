@@ -2,6 +2,7 @@
 //! (as constants made at build time), the host preview and the build scripts.
 
 use crate::capability::CapabilitySet;
+use crate::render::{Hardware, Render};
 
 /// Shape of the visible screen area.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -49,6 +50,10 @@ pub enum ProfileError {
     DisplayMismatch,
     /// A touch panel needs a screen to touch.
     TouchWithoutDisplay,
+    /// `[render]` names a backend but the device has no screen to draw on.
+    RenderWithoutDisplay,
+    /// A `[hardware]` table with no RAM at all.
+    NoRam,
     /// The text is not a valid device file; the message says what and where (an unknown field or
     /// capability, a duplicate, a bad value, a syntax error).
     #[cfg(feature = "toml")]
@@ -64,6 +69,8 @@ impl core::fmt::Display for ProfileError {
                 f.write_str("the `display` capability and the [display] table must go together")
             }
             Self::TouchWithoutDisplay => f.write_str("a device with `touch` needs a [display]"),
+            Self::RenderWithoutDisplay => f.write_str("[render] needs a [display] to draw on"),
+            Self::NoRam => f.write_str("[hardware] ram_kb must be more than zero"),
             #[cfg(feature = "toml")]
             Self::Parse(e) => write!(f, "{e}"),
         }
@@ -81,6 +88,10 @@ pub struct DeviceProfile {
     pub capabilities: CapabilitySet,
     /// How to build firmware for it, for a real board; `None` for a simulated device.
     pub firmware: Option<Firmware>,
+    /// What the chip has (RAM, PSRAM, FPU, GPU), if the board file says; the renderer choice reads it.
+    pub hardware: Option<Hardware>,
+    /// What the board file says about rendering.
+    pub render: Render,
 }
 
 impl DeviceProfile {
@@ -120,6 +131,12 @@ impl DeviceProfile {
         if self.capabilities.contains(Touch) && !shows {
             return Err(ProfileError::TouchWithoutDisplay);
         }
+        if self.render.backend.is_some() && !shows {
+            return Err(ProfileError::RenderWithoutDisplay);
+        }
+        if self.hardware.is_some_and(|h| h.ram_kb == 0) {
+            return Err(ProfileError::NoRam);
+        }
         Ok(())
     }
 }
@@ -143,6 +160,8 @@ mod tests {
             display,
             capabilities: CapabilitySet::of(caps),
             firmware: None,
+            hardware: None,
+            render: Render::default(),
         }
     }
 

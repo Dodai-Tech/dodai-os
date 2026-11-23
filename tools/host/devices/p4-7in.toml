@@ -6,3 +6,10 @@ capabilities = ["display", "touch", "wifi", "storage"]
 width = 1024
 height = 600
 shape = "rect"
+
+# An ESP32-P4 class: 32 MB of PSRAM and a floating-point unit. Numbers are the datasheet values as I
+# remember them, not measured.
+[hardware]
+ram_kb = 768
+psram_kb = 32768
+fpu = true
