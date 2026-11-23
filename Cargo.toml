@@ -15,6 +15,7 @@ exclude = [
     "crates/hibari-os-esp32s3",
     "crates/hibari-os-s3-amoled-206",
     "crates/hibari-os-s3-bench",
+    "crates/hibari-os-s3-vello-demo",
 ]
 
 # One version for the core and the workspace; `just bump X.Y.Z` edits it. Firmware crates keep

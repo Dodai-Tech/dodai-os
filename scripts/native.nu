@@ -21,7 +21,7 @@ use esp.nu [parse_ptable]
 const ROOT = path self ..
 
 # One record per board: name, crate, chip, target, flash_mb.
-export const BOARDS = [[name, crate, chip, target, flash_mb]; ["s3-amoled-206", "hibari-os-s3-amoled-206", "esp32s3", "xtensa-esp32s3-none-elf", 32] ["s3-bench", "hibari-os-s3-bench", "esp32s3", "xtensa-esp32s3-none-elf", 32]]
+export const BOARDS = [[name, crate, chip, target, flash_mb]; ["s3-amoled-206", "hibari-os-s3-amoled-206", "esp32s3", "xtensa-esp32s3-none-elf", 32] ["s3-bench", "hibari-os-s3-bench", "esp32s3", "xtensa-esp32s3-none-elf", 32] ["s3-vello-demo", "hibari-os-s3-vello-demo", "esp32s3", "xtensa-esp32s3-none-elf", 32]]
 
 # ── Pure helpers ──────────────────────────────────────────────────────────────
 
