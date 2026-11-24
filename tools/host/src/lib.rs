@@ -56,8 +56,8 @@ pub fn profile(name: &str) -> Option<&'static DeviceProfile> {
     profiles().iter().find(|p| p.name == name)
 }
 
-/// The backends built into the host: the integer one and `vello_cpu`. `tiny-skia` and the GPU backend are
-/// not linked here, so a choice of one of them is drawn with the nearest one that is.
+/// The backends built into the host: the integer one and `vello_cpu`. The GPU backend is not linked here, so a
+/// choice of it is drawn with the nearest one that is.
 pub const BUILT_IN: [Backend; 2] = [Backend::Integer, Backend::VelloCpu];
 
 /// Plans how to draw `profile`: the build's choice (`requested`, a flag here) beats the board file, which
@@ -394,9 +394,10 @@ mod tests {
     #[test]
     fn each_device_draws_with_the_backend_its_hardware_suggests() {
         let want = [
-            ("waveshare-s3-amoled-2.06", Backend::VelloCpu),
-            ("watch-round", Backend::VelloCpu),
-            ("p4-7in", Backend::VelloCpu),
+            // Microcontrollers: Vello has no SIMD there, so the integer renderer.
+            ("waveshare-s3-amoled-2.06", Backend::Integer),
+            ("watch-round", Backend::Integer),
+            ("p4-7in", Backend::Integer),
             ("desktop", Backend::VelloGpu),
         ];
         for (name, backend) in want {
@@ -427,16 +428,6 @@ mod tests {
                 .to_string()
                 .contains("vello-gpu is not built in, using vello-cpu")
         );
-        let skia = plan(profile("watch-round").unwrap(), Some(Backend::Skia)).unwrap();
-        assert_eq!(
-            (skia.choice.reason, skia.uses),
-            (hibari_device::Reason::Build, Backend::Integer)
-        );
-        assert!(
-            skia.to_string()
-                .contains("skia is not built in, using integer"),
-            "down first: the safe direction"
-        );
         let integer = plan(profile("watch-round").unwrap(), Some(Backend::Integer)).unwrap();
         assert_eq!(integer.uses, Backend::Integer);
         assert!(
@@ -446,7 +437,7 @@ mod tests {
         let s3 = plan(profile("waveshare-s3-amoled-2.06").unwrap(), None).unwrap();
         assert_eq!(
             s3.to_string(),
-            "vello-cpu (automatic: PSRAM holds a Vello frame twice over)"
+            "integer (automatic: Vello has no SIMD on this chip, so the integer renderer is several times faster)"
         );
     }
 

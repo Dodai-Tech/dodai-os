@@ -19,8 +19,8 @@ matters: each phase leaves something running on a real board. Status: `[x]` done
 ## Phase 1: make the S3 board a device
 
 - [x] **A layered renderer choice** (`hibari_device::plan`, tested; `[render]` in `board.toml`, cargo features on the firmware, `--renderer` on the host; boot report). Not yet: the S3 firmware links only the integer renderer, so another choice is reported and the integer one draws
-- [ ] **Link the other backends into the S3 firmware** (`tiny-skia`, `vello_cpu` behind the `render-*` features), a runtime setting stored on the device, and measuring `tiny-skia` on the S3
-- [ ] **Vello on the S3 in the launcher (decided: Vello always, the integer renderer goes):** the `no_std` Vello backend exists in Fusuma (measured on the S3: 2 to 3 percent over raw `vello_cpu`, `tools/bench-s3/RESULT.md`, local path dependencies until it is released); what is left is dirty-rectangle redraws in the launcher (Fusuma's Phase 1b); the integer renderer repaints the whole screen in 61 ms, so slides run near 10 fps
+- [x] **Fusuma picks the integer renderer on every microcontroller** (Vello has no SIMD there; measured on the S3 watch with Fusuma's showcase, a tap 7 ms on integer against 47 on Vello); `simd` is a key of `[hardware]` (default false). Not yet: a runtime setting stored on the device
+- [ ] **(Replaced: Fusuma now keeps the integer renderer on chips and gives it anti-aliased text and edges, see its roadmap.)** Vello on the S3 in the launcher: the `no_std` Vello backend exists in Fusuma (measured on the S3: 2 to 3 percent over raw `vello_cpu`, `tools/bench-s3/RESULT.md`, local path dependencies until it is released); what is left is dirty-rectangle redraws in the launcher (Fusuma's Phase 1b); the integer renderer repaints the whole screen in 61 ms, so slides run near 10 fps
 - [ ] **Verify on the screen:** swipes, page changes and app open and close, now that partial updates are fixed; the frame rate of a slide is unmeasured
 - [x] **PCF85063 RTC driver** and a shared `DateTime` + `Rtc` trait in `hibari-hal` (host-tested with a fake chip; not yet run on the board, and the board does not share its I2C bus with it yet)
 - [ ] **Drivers:** QMI8658 IMU, AXP2101 power and battery, the two buttons
@@ -43,7 +43,6 @@ matters: each phase leaves something running on a real board. Status: `[x]` done
 
 - [ ] **ESP32-P4 7 inch panel:** a `board.toml`, a board crate and drivers; run the Vello benchmark on it (400 MHz, FPU, vector extension)
 - [x] **Measured Vello on an ESP32-C6** (`tools/bench-c6`, no screen needed): it runs up to about 240x240 on a 320 KB heap but is 10 to 20 times slower than the integer renderer and leaves 54 to 63 KB, so a C6 with a screen would have to give up the radio or use something lighter
-- [x] **Measured `tiny-skia` on the C6 too:** 3 to 4 times faster and lighter than Vello there; all three renderers are kept and a board picks a default by its hardware
 - [ ] **ESP32-C6 as a real board:** a `board.toml` for a specific board (the one tested is an unnamed 8 MB board), a terminal or serial front end for the headless case (a Fusuma platform crate), background services
 - [ ] **Host profiles from board files:** every real board's `board.toml` built into the host preview (the S3 is)
 - [ ] A JSON schema for `board.toml`, committed and checked

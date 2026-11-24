@@ -10,7 +10,7 @@
 # 16 MB. `ota_1` at 0x1000000 is skipped by the bootloader, which falls back to the other slot.
 # An otadata entry with a wrong CRC makes the bootloader erase otadata and boot the factory app.
 #
-#   nu scripts/native.nu build   [--board s3-amoled-206] [--features render-skia]
+#   nu scripts/native.nu build   [--board s3-amoled-206] [--features render-vello-cpu]
 #   nu scripts/native.nu install [--board B] [--slot ota_0] [--port P] [--features F]
 #   nu scripts/native.nu native  [--port P]
 #   nu scripts/native.nu monitor [--port P]

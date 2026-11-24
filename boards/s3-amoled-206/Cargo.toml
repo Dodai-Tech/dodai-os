@@ -19,7 +19,6 @@ test = false
 # are on, the lightest wins. This firmware links only the integer backend today, so another choice is
 # reported at boot and drawn with the integer one.
 render-integer = []
-render-skia = []
 render-vello-cpu = []
 render-vello-gpu = []
 

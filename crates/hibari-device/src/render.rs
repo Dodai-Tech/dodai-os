@@ -76,6 +76,7 @@ mod tests {
             ram_kb: 512,
             psram_kb: 8192,
             fpu: true,
+            simd: false,
             gpu: false,
         };
         let m = machine(&device(Some(hw), true));
@@ -92,19 +93,21 @@ mod tests {
             ram_kb: 512,
             psram_kb: 8192,
             fpu: true,
+            simd: false,
             gpu: false,
         };
         let p = device(Some(hw), true);
-        assert_eq!(automatic(&p).unwrap().backend, Backend::VelloCpu);
+        // The S3 watch: Vello has no SIMD there, so the integer renderer.
+        assert_eq!(automatic(&p).unwrap().backend, Backend::Integer);
         assert_eq!(
-            choose(&p, Some(Backend::Skia)).unwrap().reason,
+            choose(&p, Some(Backend::VelloCpu)).unwrap().reason,
             Reason::Build
         );
         let (c, fit) = check(&p, choose(&p, None).unwrap());
-        assert_eq!((c.backend, fit), (Backend::VelloCpu, Fit::Fits));
+        assert_eq!((c.backend, fit), (Backend::Integer, Fit::Fits));
         assert_eq!(
             plan(&p, None, &Backend::ALL).unwrap().uses,
-            Backend::VelloCpu
+            Backend::Integer
         );
         assert_eq!(
             plan(&p, None, &[Backend::Integer]).unwrap().uses,

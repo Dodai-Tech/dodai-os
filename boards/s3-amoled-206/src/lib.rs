@@ -23,8 +23,6 @@ pub const LINKED: [hibari_device::Backend; 1] = [hibari_device::Backend::Integer
 /// automatic rule. If several features are on, the lightest wins.
 pub const BUILD_BACKEND: Option<hibari_device::Backend> = if cfg!(feature = "render-integer") {
     Some(hibari_device::Backend::Integer)
-} else if cfg!(feature = "render-skia") {
-    Some(hibari_device::Backend::Skia)
 } else if cfg!(feature = "render-vello-cpu") {
     Some(hibari_device::Backend::VelloCpu)
 } else if cfg!(feature = "render-vello-gpu") {

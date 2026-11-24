@@ -63,23 +63,6 @@ fn try_size(w: u16, h: u16) {
         log::info!("integer renderer: {t:>8} us/frame, {} bytes for the frame", usize::from(w) * usize::from(h) * 2);
     }
 
-    // tiny-skia, one surface at a time; dropped before vello allocates its own.
-    {
-        let before = esp_alloc::HEAP.used();
-        log::info!("tiny-skia: allocating...");
-        match fusuma_render_skia::Skia::new(u32::from(w), u32::from(h)) {
-            None => log::info!("tiny-skia: the surface cannot exist"),
-            Some(mut r) => {
-                let t = average(|| scene(&mut r, wi, hi));
-                log::info!(
-                    "tiny-skia: ok, {t:>8} us/frame, heap used {} bytes, heap free {} bytes",
-                    esp_alloc::HEAP.used().saturating_sub(before),
-                    esp_alloc::HEAP.free()
-                );
-            }
-        }
-    }
-
     let before = esp_alloc::HEAP.used();
     log::info!("vello_cpu: allocating...");
     let Some(mut r) = fusuma_render_vello_cpu::new(u32::from(w), u32::from(h)) else {

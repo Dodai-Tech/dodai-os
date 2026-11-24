@@ -11,4 +11,5 @@ shape = "rect"
 [hardware]
 ram_kb = 8000000
 fpu = true
+simd = true
 gpu = true

@@ -2,7 +2,7 @@
 //!
 //! ```text
 //! hibari-host --list
-//! hibari-host --device watch-round --png out.png [--tap X,Y]... [--renderer auto|integer|skia|vello-cpu|vello-gpu] [--at MS]
+//! hibari-host --device watch-round --png out.png [--tap X,Y]... [--renderer auto|integer|vello-cpu|vello-gpu] [--at MS]
 //! hibari-host --device p4-7in --window        (needs --features window)
 //! ```
 
@@ -60,7 +60,7 @@ fn parse(args: impl IntoIterator<Item = String>) -> Result<Options, String> {
                     // The old name of the integer backend.
                     "embedded" => Some(Backend::Integer),
                     other => Some(Backend::from_name(other).ok_or_else(|| {
-                        format!("unknown renderer '{other}'; auto, integer, skia, vello-cpu or vello-gpu")
+                        format!("unknown renderer '{other}'; auto, integer, vello-cpu or vello-gpu")
                     })?),
                 }
             }
@@ -148,7 +148,6 @@ mod tests {
         for (flag, want) in [
             ("integer", Backend::Integer),
             ("embedded", Backend::Integer),
-            ("skia", Backend::Skia),
             ("vello-cpu", Backend::VelloCpu),
             ("vello-gpu", Backend::VelloGpu),
         ] {
@@ -163,7 +162,7 @@ mod tests {
     fn both_renderers_write_a_png() {
         let dir = std::env::temp_dir().join(format!("hibari-host-{}", std::process::id()));
         std::fs::create_dir_all(&dir).unwrap();
-        for backend in ["integer", "vello-cpu", "auto", "skia"] {
+        for backend in ["integer", "vello-cpu", "auto"] {
             let path = dir.join(format!("{backend}.png"));
             let cmd = format!(
                 "--device watch-round --renderer {backend} --tap 200,150 --png {}",

@@ -96,7 +96,7 @@ def "test native: a missing toolchain is a clear error" [] {
 def "test native: cargo features are passed through, in any list format" [] {
     assert equal (feature_args "") []
     assert equal (feature_args "   ") []
-    assert equal (feature_args "render-skia") ["--features" "render-skia"]
+    assert equal (feature_args "render-vello-cpu") ["--features" "render-vello-cpu"]
     assert equal (feature_args "a,b") ["--features" "a,b"]
     assert equal (feature_args "a b , c") ["--features" "a,b,c"]
     assert equal (feature_args ",,a,,") ["--features" "a"]
@@ -104,8 +104,8 @@ def "test native: cargo features are passed through, in any list format" [] {
 
 def "test native: no-default turns the default features off and is not itself a feature" [] {
     assert equal (feature_args "no-default") ["--no-default-features"]
-    assert equal (feature_args "no-default,skia") ["--no-default-features" "--features" "skia"]
-    assert equal (feature_args "skia no-default") ["--no-default-features" "--features" "skia"]
+    assert equal (feature_args "no-default,fonts") ["--no-default-features" "--features" "fonts"]
+    assert equal (feature_args "fonts no-default") ["--no-default-features" "--features" "fonts"]
 }
 
 def main [] { run-tests }

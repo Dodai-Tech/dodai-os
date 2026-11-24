@@ -31,6 +31,8 @@ struct RawHardware {
     #[serde(default)]
     fpu: bool,
     #[serde(default)]
+    simd: bool,
+    #[serde(default)]
     gpu: bool,
 }
 
@@ -89,10 +91,11 @@ impl DeviceProfile {
     /// ram_kb = 512
     /// psram_kb = 8192     # default 0
     /// fpu = true          # default false
+    /// simd = false        # whether Vello has SIMD here (x86, aarch64, wasm); default false, as on every chip
     /// gpu = false         # default false
     ///
     /// [render]            # optional
-    /// backend = "skia"    # integer, skia, vello-cpu or vello-gpu; default: automatic
+    /// backend = "integer" # integer, vello-cpu or vello-gpu; default: automatic
     /// fallback = false    # step down to a lighter backend if this one does not fit; default true
     /// min_free_kb = 100   # internal RAM kept free after the frame; default 100 (a guess)
     /// ```
@@ -146,6 +149,7 @@ impl DeviceProfile {
             ram_kb: h.ram_kb,
             psram_kb: h.psram_kb,
             fpu: h.fpu,
+            simd: h.simd,
             gpu: h.gpu,
         });
         let render = match raw.render {
@@ -211,10 +215,11 @@ impl DeviceProfile {
         let hardware = match self.hardware {
             None => String::from("None"),
             Some(h) => std::format!(
-                "Some(hibari_device::Hardware {{ ram_kb: {}, psram_kb: {}, fpu: {}, gpu: {} }})",
+                "Some(hibari_device::Hardware {{ ram_kb: {}, psram_kb: {}, fpu: {}, simd: {}, gpu: {} }})",
                 h.ram_kb,
                 h.psram_kb,
                 h.fpu,
+                h.simd,
                 h.gpu
             ),
         };
@@ -365,7 +370,7 @@ height = 160
 ram_kb = 512
 
 [render]
-backend = "skia"
+backend = "vello-cpu"
 fallback = true
 "#;
 
@@ -378,13 +383,14 @@ fallback = true
                 ram_kb: 512,
                 psram_kb: 0,
                 fpu: false,
+                simd: false,
                 gpu: false
             })
         );
         assert_eq!(
             p.render,
             Render {
-                backend: Some(Backend::Skia),
+                backend: Some(Backend::VelloCpu),
                 fallback: true,
                 min_free_kb: Render::default().min_free_kb
             }
@@ -423,7 +429,7 @@ fallback = true
             "ram_kb is required"
         );
         assert!(with("[hardware]\nram_kb = 512\ncpu = 1\n").contains("cpu"));
-        let headless = "name = \"h\"\ncapabilities = [\"wifi\"]\n[render]\nbackend = \"skia\"\n";
+        let headless = "name = \"h\"\ncapabilities = [\"wifi\"]\n[render]\nbackend = \"integer\"\n";
         assert!(
             DeviceProfile::from_toml(headless)
                 .unwrap_err()
@@ -436,8 +442,8 @@ fallback = true
     fn generated_source_carries_hardware_and_render() {
         let src = DeviceProfile::from_toml(WITH_RENDER).unwrap().to_rust("P");
         for want in [
-            "hardware: Some(hibari_device::Hardware { ram_kb: 512, psram_kb: 0, fpu: false, gpu: false })",
-            "render: hibari_device::Render { backend: Some(hibari_device::Backend::Skia), fallback: true, min_free_kb: 100 }",
+            "hardware: Some(hibari_device::Hardware { ram_kb: 512, psram_kb: 0, fpu: false, simd: false, gpu: false })",
+            "render: hibari_device::Render { backend: Some(hibari_device::Backend::VelloCpu), fallback: true, min_free_kb: 100 }",
         ] {
             assert!(src.contains(want), "{want}\n{src}");
         }
@@ -457,7 +463,8 @@ fallback = true
             .unwrap();
         assert_eq!(p.hardware.unwrap().psram_kb, 8192);
         let c = crate::choose(&p, None).unwrap();
-        assert_eq!(c.backend, Backend::VelloCpu);
+        // Vello has no SIMD on the S3: measured on the watch, a tap takes 7 ms on integer against 47 on Vello.
+        assert_eq!(c.backend, Backend::Integer);
         assert!(matches!(c.reason, crate::Reason::Automatic(_)));
         assert_eq!(crate::check(&p, c).1, crate::Fit::Fits);
     }

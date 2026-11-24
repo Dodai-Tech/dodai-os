@@ -24,8 +24,9 @@ flash_mb = 32
 ram_kb = 512
 psram_kb = 8192
 fpu = true
+simd = false              # whether Vello has SIMD here; false on every microcontroller
 
-[render]                  # optional: pin a backend (integer, skia, vello-cpu, vello-gpu)
+[render]                  # optional: pin a backend (integer, vello-cpu, vello-gpu)
 backend = "vello-cpu"
 fallback = true           # step down if it does not fit
 ```
