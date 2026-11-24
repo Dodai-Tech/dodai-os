@@ -452,17 +452,15 @@ mod tests {
 
     #[test]
     fn a_choice_that_does_not_fit_is_reported() {
-        const TIGHT: &str = "name = \"tight\"\ncapabilities = [\"display\"]\n[display]\nwidth = 240\nheight = 320\n[hardware]\nram_kb = 512\n[render]\nbackend = \"vello-cpu\"\n";
-        let p = DeviceProfile::from_toml(TIGHT).unwrap();
-        let plan = plan(&p, None).unwrap();
+        const TIGHT: &str = "name = \"tight\"\ncapabilities = [\"display\"]\n[display]\nwidth = 240\nheight = 320\n[hardware]\nram_kb = 320\n[render]\nbackend = \"vello-cpu\"\n";
+        // The profile borrows its text for the whole program, so the test leaks it.
+        let leak = |t: String| -> &'static str { Box::leak(t.into_boxed_str()) };
+        let strict = DeviceProfile::from_toml(leak(format!("{TIGHT}fallback = false\n"))).unwrap();
+        let plan = plan(&strict, None).unwrap();
         assert!(matches!(plan.fit, Fit::TooBig { .. }));
         assert!(plan.to_string().contains("allow a fallback"));
-        // The profile borrows its text for the whole program, so the test leaks it.
-        let relaxed_text: &'static str = Box::leak(
-            TIGHT
-                .replace("vello-cpu\"", "vello-cpu\"\nfallback = true")
-                .into_boxed_str(),
-        );
+        // Falling back is the default.
+        let relaxed_text = leak(TIGHT.to_owned());
         let relaxed = DeviceProfile::from_toml(relaxed_text).unwrap();
         let plan = super::plan(&relaxed, None).unwrap();
         assert_eq!(plan.choice.backend, Backend::Integer);

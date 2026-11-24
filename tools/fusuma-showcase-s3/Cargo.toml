@@ -1,0 +1,45 @@
+[package]
+name = "fusuma-showcase-s3"
+description = "The Fusuma components showcase on the Waveshare ESP32-S3-Touch-AMOLED-2.06 watch (410x502 AMOLED, FT3168 touch), on esp-hal with no ESP-IDF (not published)"
+readme = "README.md"
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+publish = false
+
+[[bin]]
+name = "fusuma-showcase-s3"
+path = "src/main.rs"
+test = false
+
+[features]
+# Which renderers are linked next to the integer one, and whether text is a vector font. The chooser picks among
+# what is linked by the board's memory; with none of these the integer renderer and the bitmap font draw.
+default = ["vello-cpu", "fonts"]
+vello-cpu = ["fusuma-platform-embedded/vello-cpu", "fusuma-platform-embedded/libm"]
+skia = ["fusuma-platform-embedded/skia"]
+fonts = ["fusuma-showcase/fonts", "vello-cpu"]
+
+[dependencies]
+hibari-board-s3-amoled-206 = { path = "../../boards/s3-amoled-206" }
+hibari-hal = { path = "../../crates/hibari-hal" }
+hibari-drivers = { path = "../../crates/hibari-drivers" }
+# Fusuma comes from a sibling checkout until it is on crates.io.
+fusuma = { path = "../../../../fusuma/crates/fusuma", default-features = false, features = ["libm"] }
+fusuma-platform-embedded = { path = "../../../../fusuma/crates/fusuma-platform-embedded" }
+fusuma-showcase = { path = "../../../../fusuma/examples/showcase", default-features = false }
+esp-hal = { version = "1.0.0", features = ["esp32s3", "unstable", "psram", "log-04"] }
+esp-alloc = "0.9.0"
+esp-println = { version = "0.16.1", features = ["esp32s3", "log-04"] }
+esp-backtrace = { version = "0.18.1", features = ["esp32s3", "panic-handler", "println"] }
+esp-bootloader-esp-idf = { version = "0.4", features = ["esp32s3"] }
+log = "0.4"
+
+[profile.dev]
+opt-level = "s"
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+debug = "line-tables-only"

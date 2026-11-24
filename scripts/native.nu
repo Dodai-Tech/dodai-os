@@ -22,7 +22,7 @@ const ROOT = path self ..
 
 # What can be built for an ESP32 with esp-hal: name, directory, crate, and the directory whose `board.toml`
 # describes the device it runs on (chip, target and flash size are read from its [firmware] table).
-export const BOARDS = [[name, dir, crate, device]; ["s3-amoled-206", "boards/s3-amoled-206", "hibari-board-s3-amoled-206", "boards/s3-amoled-206"] ["s3-bench", "tools/bench-s3", "hibari-bench-s3", "boards/s3-amoled-206"] ["s3-vello-demo", "tools/vello-demo-s3", "hibari-demo-s3-vello", "boards/s3-amoled-206"] ["c6-bench", "tools/bench-c6", "hibari-bench-c6", "tools/bench-c6"]]
+export const BOARDS = [[name, dir, crate, device]; ["s3-amoled-206", "boards/s3-amoled-206", "hibari-board-s3-amoled-206", "boards/s3-amoled-206"] ["s3-bench", "tools/bench-s3", "hibari-bench-s3", "boards/s3-amoled-206"] ["s3-vello-demo", "tools/vello-demo-s3", "hibari-demo-s3-vello", "boards/s3-amoled-206"] ["s3-fusuma-showcase", "tools/fusuma-showcase-s3", "fusuma-showcase-s3", "boards/s3-amoled-206"] ["c6-bench", "tools/bench-c6", "hibari-bench-c6", "tools/bench-c6"]]
 
 # ── Pure helpers ──────────────────────────────────────────────────────────────
 
@@ -117,10 +117,15 @@ def crate_dir [b: record]: nothing -> path { $ROOT | path join $b.dir }
 
 def elf_path [b: record]: nothing -> path { crate_dir $b | path join target $b.target release $b.crate }
 
-# The cargo arguments for a comma or space separated list of features: `[--features a,b]`, or nothing.
+# The cargo arguments for a comma or space separated list of features: `[--features a,b]`, or nothing. The word
+# `no-default` adds `--no-default-features`.
 export def feature_args [features: string]: nothing -> list<string> {
-    let list = $features | split row --regex '[,\s]+' | where { |f| $f | is-not-empty }
-    if ($list | is-empty) { [] } else { ["--features" ($list | str join ",")] }
+    let all = $features | split row --regex '[,\s]+' | where { |f| $f | is-not-empty }
+    # `no-default` is not a feature: it turns the crate's default features off.
+    let defaults = if ("no-default" in $all) { ["--no-default-features"] } else { [] }
+    let list = $all | where { |f| $f != "no-default" }
+    let named = if ($list | is-empty) { [] } else { ["--features" ($list | str join ",")] }
+    $defaults | append $named
 }
 
 def "main build" [--board: string = "s3-amoled-206", --features: string = ""] {

@@ -39,7 +39,9 @@ struct RawHardware {
 struct RawRender<'a> {
     backend: Option<&'a str>,
     #[serde(default)]
-    fallback: bool,
+    fallback: Option<bool>,
+    #[serde(default)]
+    min_free_kb: Option<u32>,
 }
 
 #[derive(Deserialize)]
@@ -91,7 +93,8 @@ impl DeviceProfile {
     ///
     /// [render]            # optional
     /// backend = "skia"    # integer, skia, vello-cpu or vello-gpu; default: automatic
-    /// fallback = true     # step down to a lighter backend if this one does not fit; default false
+    /// fallback = false    # step down to a lighter backend if this one does not fit; default true
+    /// min_free_kb = 100   # internal RAM kept free after the frame; default 100 (a guess)
     /// ```
     ///
     /// # Errors
@@ -160,7 +163,8 @@ impl DeviceProfile {
                         })
                     })
                     .transpose()?,
-                fallback: r.fallback,
+                fallback: r.fallback.unwrap_or(Render::default().fallback),
+                min_free_kb: r.min_free_kb.unwrap_or(Render::default().min_free_kb),
             },
         };
         let profile = Self {
@@ -219,10 +223,11 @@ impl DeviceProfile {
             Some(b) => std::format!("Some(hibari_device::Backend::{})", b.variant()),
         };
         std::format!(
-            "pub const {const_name}: hibari_device::DeviceProfile = hibari_device::DeviceProfile {{\n    name: {:?},\n    display: {display},\n    capabilities: hibari_device::CapabilitySet::of(&[{}]),\n    firmware: {firmware},\n    hardware: {hardware},\n    render: hibari_device::Render {{ backend: {backend}, fallback: {} }},\n}};\n",
+            "pub const {const_name}: hibari_device::DeviceProfile = hibari_device::DeviceProfile {{\n    name: {:?},\n    display: {display},\n    capabilities: hibari_device::CapabilitySet::of(&[{}]),\n    firmware: {firmware},\n    hardware: {hardware},\n    render: hibari_device::Render {{ backend: {backend}, fallback: {}, min_free_kb: {} }},\n}};\n",
             self.name,
             caps.join(", "),
-            self.render.fallback
+            self.render.fallback,
+            self.render.min_free_kb
         )
     }
 }
@@ -380,7 +385,8 @@ fallback = true
             p.render,
             Render {
                 backend: Some(Backend::Skia),
-                fallback: true
+                fallback: true,
+                min_free_kb: Render::default().min_free_kb
             }
         );
         let none = DeviceProfile::from_toml("name = \"n\"\n").unwrap();
@@ -390,7 +396,8 @@ fallback = true
             only_fallback.render,
             Render {
                 backend: None,
-                fallback: true
+                fallback: true,
+                min_free_kb: Render::default().min_free_kb
             }
         );
     }
@@ -430,7 +437,7 @@ fallback = true
         let src = DeviceProfile::from_toml(WITH_RENDER).unwrap().to_rust("P");
         for want in [
             "hardware: Some(hibari_device::Hardware { ram_kb: 512, psram_kb: 0, fpu: false, gpu: false })",
-            "render: hibari_device::Render { backend: Some(hibari_device::Backend::Skia), fallback: true }",
+            "render: hibari_device::Render { backend: Some(hibari_device::Backend::Skia), fallback: true, min_free_kb: 100 }",
         ] {
             assert!(src.contains(want), "{want}\n{src}");
         }
@@ -440,7 +447,7 @@ fallback = true
         assert!(
             plain.contains("hardware: None")
                 && plain
-                    .contains("render: hibari_device::Render { backend: None, fallback: false }")
+                    .contains("render: hibari_device::Render { backend: None, fallback: true, min_free_kb: 100 }")
         );
     }
 

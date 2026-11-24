@@ -5,8 +5,8 @@
 use crate::DeviceProfile;
 
 pub use fusuma_platform::{
-    Backend, Choice, Fit, Hardware, Machine, Plan, RAM_SHARE_PERCENT, Reason, Render, budget, fits,
-    nearest,
+    Backend, Choice, DEFAULT_MIN_FREE_KB, Fit, Hardware, Machine, Plan, Reason, Render, budget,
+    fits, nearest,
 };
 
 /// What the choice needs to know about a device: its screen, its hardware and its render settings.

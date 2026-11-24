@@ -15,6 +15,7 @@ exclude = [
     "boards/esp32s3-idf",
     "tools/bench-s3",
     "tools/vello-demo-s3",
+    "tools/fusuma-showcase-s3",
     "tools/bench-c6",
 ]
 

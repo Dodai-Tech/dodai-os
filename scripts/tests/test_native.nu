@@ -102,4 +102,10 @@ def "test native: cargo features are passed through, in any list format" [] {
     assert equal (feature_args ",,a,,") ["--features" "a"]
 }
 
+def "test native: no-default turns the default features off and is not itself a feature" [] {
+    assert equal (feature_args "no-default") ["--no-default-features"]
+    assert equal (feature_args "no-default,skia") ["--no-default-features" "--features" "skia"]
+    assert equal (feature_args "skia no-default") ["--no-default-features" "--features" "skia"]
+}
+
 def main [] { run-tests }
