@@ -14,8 +14,13 @@ use crate::{
 #[serde(deny_unknown_fields)]
 struct RawProfile<'a> {
     name: &'a str,
+    #[serde(borrow)]
+    about: Option<&'a str>,
     #[serde(default)]
     capabilities: Vec<&'a str>,
+    // The parts and their wiring, for a firmware's drivers: checked by Fusuma's board-file reader, not used here.
+    touch: Option<toml::Value>,
+    backlight: Option<toml::Value>,
     display: Option<RawDisplay<'a>>,
     firmware: Option<RawFirmware<'a>>,
     hardware: Option<RawHardware>,
@@ -53,14 +58,35 @@ struct RawDisplay<'a> {
     height: u16,
     shape: Option<&'a str>,
     offset: Option<[u16; 2]>,
+    // The panel's outline and wiring, for a firmware's drivers: checked by Fusuma's board-file reader, not used here.
+    radius: Option<u32>,
+    grid: Option<u32>,
+    controller: Option<&'a str>,
+    bus: Option<&'a str>,
+    pins: Option<toml::Value>,
+    options: Option<toml::Value>,
 }
 
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
 struct RawFirmware<'a> {
     chip: &'a str,
-    target: &'a str,
+    target: Option<&'a str>,
     flash_mb: u32,
+    boot_limit_mb: Option<u32>,
+}
+
+/// The bare-metal (esp-hal) Rust target of an ESP chip, for a device file that does not say its own.
+fn bare_metal_target(chip: &str) -> Option<&'static str> {
+    Some(match chip {
+        "esp32" => "xtensa-esp32-none-elf",
+        "esp32s2" => "xtensa-esp32s2-none-elf",
+        "esp32s3" => "xtensa-esp32s3-none-elf",
+        "esp32c2" | "esp32c3" => "riscv32imc-unknown-none-elf",
+        "esp32c6" | "esp32h2" => "riscv32imac-unknown-none-elf",
+        "esp32p4" => "riscv32imafc-unknown-none-elf",
+        _ => return None,
+    })
 }
 
 fn bad(msg: String) -> ProfileError {
@@ -79,7 +105,7 @@ impl DeviceProfile {
     /// [display]
     /// width = 410
     /// height = 502
-    /// shape = "rect"      # or "round"; default "rect"
+    /// shape = "rect"      # rect, rounded (with radius) or circle; default "rect"
     /// offset = [22, 0]    # default [0, 0]
     ///
     /// [firmware]          # only for a real board
@@ -104,7 +130,10 @@ impl DeviceProfile {
     /// [`ProfileError::Parse`] for text that is not a device file, or the error of
     /// [`validate`](Self::validate).
     pub fn from_toml(text: &'static str) -> Result<Self, ProfileError> {
+        // The format is Fusuma's board file: its reader checks every key, the parts' controllers and their pins.
+        fusuma_platform::board::BoardFile::from_toml(text, "device file").map_err(|e| bad(e.0))?;
         let raw: RawProfile<'static> = toml::from_str(text).map_err(|e| bad(e.to_string()))?;
+        let _ = (&raw.about, &raw.touch, &raw.backlight);
         let mut capabilities = CapabilitySet::EMPTY;
         for name in &raw.capabilities {
             let cap = Capability::from_name(name).ok_or_else(|| {
@@ -122,15 +151,17 @@ impl DeviceProfile {
         let display = raw
             .display
             .map(|d| {
+                // Hibari draws square or round screens; rounded corners are drawn square for now.
                 let shape = match d.shape {
-                    None | Some("rect") => Shape::Rect,
-                    Some("round") => Shape::Round,
+                    None | Some("rect" | "rounded") => Shape::Rect,
+                    Some("circle") => Shape::Round,
                     Some(other) => {
                         return Err(bad(std::format!(
-                            "unknown shape '{other}'; use \"rect\" or \"round\""
+                            "unknown shape '{other}'; use rect, rounded or circle"
                         )));
                     }
                 };
+                let _ = (d.radius, d.grid, d.controller, d.bus, &d.pins, &d.options);
                 let [x, y] = d.offset.unwrap_or([0, 0]);
                 Ok(DisplayInfo {
                     width: d.width,
@@ -140,11 +171,26 @@ impl DeviceProfile {
                 })
             })
             .transpose()?;
-        let firmware = raw.firmware.map(|f| Firmware {
-            chip: f.chip,
-            target: f.target,
-            flash_mb: f.flash_mb,
-        });
+        let firmware = raw
+            .firmware
+            .map(|f| {
+                let _ = f.boot_limit_mb;
+                let target = f
+                    .target
+                    .or_else(|| bare_metal_target(f.chip))
+                    .ok_or_else(|| {
+                        bad(std::format!(
+                            "firmware.target: none known for chip '{}'",
+                            f.chip
+                        ))
+                    })?;
+                Ok(Firmware {
+                    chip: f.chip,
+                    target,
+                    flash_mb: f.flash_mb,
+                })
+            })
+            .transpose()?;
         let hardware = raw.hardware.map(|h| Hardware {
             ram_kb: h.ram_kb,
             psram_kb: h.psram_kb,
@@ -284,7 +330,7 @@ flash_mb = 32
         let p = DeviceProfile::from_toml("name = \"box\"\ncapabilities = [\"wifi\", \"led\"]\n")
             .unwrap();
         assert!(p.display.is_none() && p.firmware.is_none());
-        let round = DeviceProfile::from_toml("name = \"r\"\ncapabilities = [\"display\"]\n[display]\nwidth = 466\nheight = 466\nshape = \"round\"\n").unwrap();
+        let round = DeviceProfile::from_toml("name = \"r\"\ncapabilities = [\"display\"]\n[display]\nwidth = 466\nheight = 466\nshape = \"circle\"\n").unwrap();
         assert_eq!(round.display.unwrap().shape, Shape::Round);
         assert_eq!(round.display.unwrap().offset, (0, 0));
         let none = DeviceProfile::from_toml("name = \"n\"\n").unwrap();
@@ -309,7 +355,7 @@ flash_mb = 32
             err("capabilities = []\n").contains("name"),
             "the name is required"
         );
-        assert!(err("name = \"\"\n").contains("no name"));
+        assert!(err("name = \"\"\n").contains("name ''"), "an empty name");
         assert!(
             err("name = \"x\"\ncapabilities = [\"display\"]\n").contains("display"),
             "a display capability needs a screen"
@@ -320,9 +366,14 @@ flash_mb = 32
         );
         assert!(
             err("name = \"x\"\ncapabilities = [\"display\"]\n[display]\nwidth = 0\nheight = 5\n")
-                .contains("zero")
+                .contains("display.width")
         );
-        assert!(err("name = \"x\"\ncapabilities = [\"display\"]\n[display]\nwidth = 70000\nheight = 5\n").contains("70000") || err("name = \"x\"\ncapabilities = [\"display\"]\n[display]\nwidth = 70000\nheight = 5\n").contains("invalid"));
+        assert!(
+            err(
+                "name = \"x\"\ncapabilities = [\"display\"]\n[display]\nwidth = 70000\nheight = 5\n"
+            )
+            .contains("display.width")
+        );
         assert!(!err("this is not toml").is_empty());
         assert!(!err("").is_empty());
     }
@@ -467,6 +518,24 @@ fallback = true
         assert_eq!(c.backend, Backend::Integer);
         assert!(matches!(c.reason, crate::Reason::Automatic(_)));
         assert_eq!(crate::check(&p, c).1, crate::Fit::Fits);
+    }
+
+    /// Fusuma's board file for the same watch (its ESP-IDF firmware builds from it) is the same format: Hibari reads
+    /// it as it is, with its wiring, and gets the bare-metal target from the chip.
+    #[test]
+    fn fusumas_board_file_for_the_watch_reads_here() {
+        let p = DeviceProfile::from_toml(include_str!(
+            "../../../../../fusuma/crates/fusuma-platform-esp/boards/s3-amoled-206/board.toml"
+        ))
+        .unwrap();
+        assert_eq!(p.screen_size(), (410, 502));
+        let f = p.firmware.unwrap();
+        assert_eq!(
+            (f.chip, f.target, f.flash_mb),
+            ("esp32s3", "xtensa-esp32s3-none-elf", 32)
+        );
+        assert_eq!(p.display.unwrap().offset, (22, 0));
+        assert!(p.capabilities.contains(Capability::Touch));
     }
 
     /// The device files of this repository, which the firmware and the host both load.

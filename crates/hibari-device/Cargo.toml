@@ -18,7 +18,7 @@ path = "src/lib.rs"
 
 [features]
 # Load a device from TOML text and generate Rust constants (for tools and build scripts).
-toml = ["dep:toml", "dep:serde"]
+toml = ["dep:toml", "dep:serde", "fusuma-platform/toml"]
 
 [dependencies]
 fusuma-platform.workspace = true
